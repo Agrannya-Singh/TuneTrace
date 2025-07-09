@@ -1,126 +1,44 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import SpotifyWebApi from 'spotify-web-api-node';
-import { cookies } from 'next/headers';
 
 const spotifyApi = new SpotifyWebApi({
   clientId: process.env.SPOTIFY_CLIENT_ID,
   clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-  // The redirectUri is now handled on the client-side after the initial redirect from Spotify
-  redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL}`,
 });
 
-const SPOTIFY_TOKEN_COOKIE = 'spotify_token';
-const SPOTIFY_STATE_COOKIE = 'spotify_auth_state';
-
-const scopes = [
-    'user-read-email',
-    'user-library-read',
-    'playlist-modify-public',
-    'playlist-modify-private',
-];
-
-// Helper to get a valid access token
-async function getValidAccessToken() {
-    const cookieStore = cookies();
-    const tokenInfo = cookieStore.get(SPOTIFY_TOKEN_COOKIE);
-
-    if (!tokenInfo) return null;
-
-    const token = JSON.parse(tokenInfo.value);
-    spotifyApi.setAccessToken(token.access_token);
-    spotifyApi.setRefreshToken(token.refresh_token);
-
-    // Check if the token is expired (or close to expiring)
-    if (Date.now() > token.expires_at - 60000) {
-        console.log('Refreshing Spotify access token...');
-        try {
-            const data = await spotifyApi.refreshAccessToken();
-            const newAccessToken = data.body['access_token'];
-            const newExpiresIn = data.body['expires_in'];
-            
-            spotifyApi.setAccessToken(newAccessToken);
-
-            const newToken = {
-                ...token,
-                access_token: newAccessToken,
-                expires_at: Date.now() + newExpiresIn * 1000,
-            };
-
-            cookieStore.set(SPOTIFY_TOKEN_COOKIE, JSON.stringify(newToken), {
-                httpOnly: true,
-                secure: process.env.NODE_ENV !== 'development',
-                maxAge: 60 * 60 * 24 * 7, // 1 week
-                path: '/',
-            });
-
-            return newAccessToken;
-        } catch (error) {
-            console.error('Could not refresh access token', error);
-            // Clear the bad cookie
-            cookieStore.delete(SPOTIFY_TOKEN_COOKIE);
-            return null;
-        }
+// Helper to get a valid access token using client credentials
+async function getClientCredentialsToken() {
+    // Check if we have a valid token in memory (simple cache)
+    if (spotifyApi.getAccessToken() && (spotifyApi as any)._credentials.tokenExpirationNumber > Date.now()) {
+        return spotifyApi.getAccessToken();
     }
+    
+    console.log('Fetching new Spotify client credentials access token...');
+    try {
+        const data = await spotifyApi.clientCredentialsGrant();
+        const accessToken = data.body['access_token'];
+        const expiresIn = data.body['expires_in'];
+        
+        spotifyApi.setAccessToken(accessToken);
+        // Set a slightly earlier expiration to be safe
+        (spotifyApi as any)._credentials.tokenExpirationNumber = Date.now() + (expiresIn - 300) * 1000;
 
-    return token.access_token;
+        console.log('New access token obtained.');
+        return accessToken;
+    } catch (error) {
+        console.error('Could not get client credentials token', error);
+        return null;
+    }
 }
+
 
 // Route handler
 async function handler(req: NextRequest, { params }: { params: { path: string[] }}) {
     const path = params.path.join('/');
     const { searchParams } = new URL(req.url);
 
-    if (path === 'login') {
-        const state = Math.random().toString(36).substring(7);
-        const cookieStore = cookies();
-        cookieStore.set(SPOTIFY_STATE_COOKIE, state, {
-            httpOnly: true,
-            maxAge: 300, // 5 minutes
-            path: '/',
-        });
-        const authorizeURL = spotifyApi.createAuthorizeURL(scopes, state);
-        return NextResponse.redirect(authorizeURL);
-    }
-    
-    if (path === 'token') {
-        const cookieStore = cookies();
-        const storedState = cookieStore.get(SPOTIFY_STATE_COOKIE)?.value;
-        const code = searchParams.get('code');
-        const state = searchParams.get('state');
-
-        cookieStore.delete(SPOTIFY_STATE_COOKIE);
-
-        if (state === null || state !== storedState) {
-            return new NextResponse('State mismatch error', { status: 400 });
-        }
-        
-        try {
-            const data = await spotifyApi.authorizationCodeGrant(code!);
-            const { access_token, refresh_token, expires_in } = data.body;
-            
-            const tokenInfo = {
-                access_token,
-                refresh_token,
-                expires_at: Date.now() + expires_in * 1000,
-            }
-
-            cookieStore.set(SPOTIFY_TOKEN_COOKIE, JSON.stringify(tokenInfo), {
-                httpOnly: true,
-                secure: process.env.NODE_ENV !== 'development',
-                maxAge: 60 * 60 * 24 * 7, // 1 week
-                path: '/',
-            });
-            
-            return NextResponse.json({ success: true });
-
-        } catch (error) {
-            console.error('Error getting Tokens:', error);
-            return new NextResponse('Internal Server Error', { status: 500 });
-        }
-    }
-
-    // All other paths are treated as proxied API calls
-    const accessToken = await getValidAccessToken();
+    // All paths are treated as proxied API calls using client credentials
+    const accessToken = await getClientCredentialsToken();
     if (!accessToken) {
         return new NextResponse('Unauthorized', { status: 401 });
     }

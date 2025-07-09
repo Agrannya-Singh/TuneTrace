@@ -14,9 +14,9 @@ import { SongCard } from './song-card';
 import { Button } from '@/components/ui/button';
 import { Heart, Loader2, RotateCw, X, Music, Check, ListMusic } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-type AppState = 'initial' | 'loading' | 'ready' | 'outOfCards' | 'error';
+type AppState = 'initial' | 'loading' | 'ready' | 'outOfCards' | 'error' | 'authenticating';
 
 export default function TuneSwipeClient() {
   const [appState, setAppState] = useState<AppState>('initial');
@@ -26,6 +26,7 @@ export default function TuneSwipeClient() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const currentIndexRef = useRef(currentIndex);
 
@@ -81,6 +82,12 @@ export default function TuneSwipeClient() {
     setAppState('loading');
     try {
       const importedIds = await importLikedSongs();
+      if (importedIds.length === 0) {
+        toast({
+            title: "No Liked Songs Found",
+            description: "We couldn't find any liked songs on your Spotify account. Try liking some songs on Spotify first!",
+        });
+      }
       setLikedSongsFromSpotify(importedIds);
       // Reset state for new user session
       setSongs([]);
@@ -153,11 +160,12 @@ export default function TuneSwipeClient() {
             </Button>
           </div>
         );
+      case 'authenticating':
       case 'loading':
          return (
           <div className="text-center flex flex-col items-center justify-center h-full text-white">
             <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
-            <p className="text-xl">Finding your next jam...</p>
+            <p className="text-xl">{appState === 'authenticating' ? 'Authenticating with Spotify...' : 'Finding your next jam...'}</p>
           </div>
         );
       case 'ready':
@@ -218,14 +226,38 @@ export default function TuneSwipeClient() {
   };
 
   useEffect(() => {
-    // This effect runs once on mount to check if we are coming back from Spotify auth
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('authed') === 'true') {
-        handleImport();
-        // Clean up the URL
-        window.history.replaceState({}, document.title, "/");
+    // This effect runs on mount to handle the redirect from Spotify
+    const code = searchParams.get('code');
+    const state = searchParams.get('state');
+
+    const finishAuth = async (code: string, state: string) => {
+        setAppState('authenticating');
+        try {
+            const response = await fetch(`/api/spotify/token?code=${code}&state=${state}`);
+            if (!response.ok) throw new Error('Failed to get token');
+            
+            // Clean up the URL
+            window.history.replaceState({}, document.title, "/");
+            
+            await handleImport();
+
+        } catch (error) {
+            console.error('Authentication error:', error);
+            setAppState('error');
+            toast({
+              variant: "destructive",
+              title: "Authentication Failed",
+              description: "Could not connect to Spotify. Please try again.",
+            });
+             // Clean up the URL
+            window.history.replaceState({}, document.title, "/");
+        }
+    };
+
+    if (code && state) {
+      finishAuth(code, state);
     }
-  }, []);
+  }, [searchParams, toast]);
 
   return (
     <div className="bg-background w-screen h-screen overflow-hidden flex flex-col items-center justify-center p-4">

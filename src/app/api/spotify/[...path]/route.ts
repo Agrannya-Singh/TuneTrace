@@ -5,7 +5,8 @@ import { cookies } from 'next/headers';
 const spotifyApi = new SpotifyWebApi({
   clientId: process.env.SPOTIFY_CLIENT_ID,
   clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-  redirectUri: process.env.SPOTIFY_REDIRECT_URI,
+  // The redirectUri is now handled on the client-side after the initial redirect from Spotify
+  redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL}`,
 });
 
 const SPOTIFY_TOKEN_COOKIE = 'spotify_token';
@@ -67,6 +68,7 @@ async function getValidAccessToken() {
 // Route handler
 async function handler(req: NextRequest, { params }: { params: { path: string[] }}) {
     const path = params.path.join('/');
+    const { searchParams } = new URL(req.url);
 
     if (path === 'login') {
         const state = Math.random().toString(36).substring(7);
@@ -79,20 +81,19 @@ async function handler(req: NextRequest, { params }: { params: { path: string[] 
         const authorizeURL = spotifyApi.createAuthorizeURL(scopes, state);
         return NextResponse.redirect(authorizeURL);
     }
-
-    if (path === 'callback') {
+    
+    if (path === 'token') {
         const cookieStore = cookies();
         const storedState = cookieStore.get(SPOTIFY_STATE_COOKIE)?.value;
-        const { searchParams } = new URL(req.url);
         const code = searchParams.get('code');
         const state = searchParams.get('state');
-        
+
         cookieStore.delete(SPOTIFY_STATE_COOKIE);
 
         if (state === null || state !== storedState) {
             return new NextResponse('State mismatch error', { status: 400 });
         }
-
+        
         try {
             const data = await spotifyApi.authorizationCodeGrant(code!);
             const { access_token, refresh_token, expires_in } = data.body;
@@ -110,9 +111,7 @@ async function handler(req: NextRequest, { params }: { params: { path: string[] 
                 path: '/',
             });
             
-            const redirectUrl = new URL('/', req.nextUrl.origin);
-            redirectUrl.searchParams.set('authed', 'true');
-            return NextResponse.redirect(redirectUrl);
+            return NextResponse.json({ success: true });
 
         } catch (error) {
             console.error('Error getting Tokens:', error);
@@ -127,7 +126,6 @@ async function handler(req: NextRequest, { params }: { params: { path: string[] 
     }
     
     // Construct the Spotify API URL
-    const { searchParams } = new URL(req.url);
     const spotifyUrl = `https://api.spotify.com/v1/${path}?${searchParams.toString()}`;
 
     try {

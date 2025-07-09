@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback, createRef } from 'react';
 import type { TinderCardAPI } from 'react-tinder-card';
 import TinderCard from 'react-tinder-card';
 import type { Song } from '@/lib/lastfm';
@@ -15,18 +15,20 @@ export default function TuneSwipeClient() {
   const [appState, setAppState] = useState<AppState>('loading');
   const [songs, setSongs] = useState<Song[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [childRefs, setChildRefs] = useState<React.RefObject<TinderCardAPI>[]>([]);
+
   const { toast } = useToast();
 
   const currentIndexRef = useRef(currentIndex);
-
-  const childRefs = useMemo(
-    () =>
-      Array(songs.length)
-        .fill(0)
-        .map(() => useRef<TinderCardAPI>(null)),
-    [songs]
-  );
   
+  useEffect(() => {
+    // Set refs when songs are loaded
+    if (songs.length > 0) {
+      setChildRefs(Array(songs.length).fill(0).map(() => createRef<TinderCardAPI>()));
+      setCurrentIndex(songs.length - 1);
+    }
+  }, [songs]);
+
   const updateCurrentIndex = (val: number) => {
     setCurrentIndex(val);
     currentIndexRef.current = val;
@@ -44,7 +46,6 @@ export default function TuneSwipeClient() {
       const topSongs = await res.json();
       
       setSongs(topSongs);
-      setCurrentIndex(topSongs.length - 1);
       if (topSongs.length > 0) {
         setAppState('ready');
       } else {
@@ -101,7 +102,7 @@ export default function TuneSwipeClient() {
         return (
           <div className="flex flex-col items-center justify-center w-full h-full">
             <div className="w-full max-w-sm h-[60vh] md:max-w-md md:h-[65vh] relative">
-              {songs.length > 0 ? (
+              {songs.length > 0 && childRefs.length > 0 ? (
                 songs.map((song, index) => (
                   <TinderCard
                     ref={childRefs[index]}

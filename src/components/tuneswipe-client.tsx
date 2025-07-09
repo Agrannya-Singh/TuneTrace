@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import type { TinderCardAPI } from 'react-tinder-card';
 import TinderCard from 'react-tinder-card';
-import { getGlobalTopSongs, type Song } from '@/lib/spotify';
+import type { Song } from '@/lib/spotify';
 import { SongCard } from './song-card';
 import { Button } from '@/components/ui/button';
 import { Heart, Loader2, RotateCw, X, Music } from 'lucide-react';
@@ -65,7 +65,12 @@ export default function TuneSwipeClient() {
   const fetchSongs = useCallback(async () => {
     setAppState('loading');
     try {
-      const globalSongs = await getGlobalTopSongs();
+      const res = await fetch('/api/songs');
+      if (!res.ok) {
+        throw new Error(`Server responded with ${res.status}`);
+      }
+      const globalSongs = await res.json();
+      
       setSongs(globalSongs);
       updateCurrentIndex(globalSongs.length - 1);
       if (globalSongs.length > 0) {
@@ -79,7 +84,7 @@ export default function TuneSwipeClient() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Could not fetch songs from Spotify. Please try again later.",
+        description: "Could not fetch songs from Spotify. Please check credentials and try again.",
       })
     }
   }, [toast, playCurrentSong]);

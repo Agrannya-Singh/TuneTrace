@@ -11,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {getSpotifyRecommendations} from '@/lib/spotify';
 
 const RecommendSongsInputSchema = z.object({
   swipeHistory: z
@@ -31,17 +32,41 @@ export async function recommendSongs(input: RecommendSongsInput): Promise<Recomm
   return recommendSongsFlow(input);
 }
 
+const spotifyRecommendationsTool = ai.defineTool(
+    {
+        name: 'getSpotifyRecommendations',
+        description: 'Gets song recommendations from Spotify based on seed tracks.',
+        inputSchema: z.object({
+            seed_tracks: z.array(z.string()).describe('A list of Spotify track IDs to use as a seed for recommendations.'),
+            limit: z.number().describe('The number of recommendations to return.'),
+        }),
+        outputSchema: z.object({
+            tracks: z.array(z.object({
+                id: z.string(),
+            })),
+        }),
+    },
+    async ({ seed_tracks, limit }) => getSpotifyRecommendations({ seed_tracks, limit })
+);
+
+
 const prompt = ai.definePrompt({
   name: 'recommendSongsPrompt',
   input: {schema: RecommendSongsInputSchema},
   output: {schema: RecommendSongsOutputSchema},
-  prompt: `You are a music recommendation expert. Analyze the user's music preferences based on their swipe history and liked songs to generate personalized song recommendations.
+  tools: [spotifyRecommendationsTool],
+  prompt: `You are a music recommendation expert. Your goal is to help users discover new music.
+  
+Analyze the user's music preferences based on their existing liked songs and their recent swipe history.
 
-Swipe History (song IDs): {{{swipeHistory}}}
-Liked Songs (song IDs): {{{likedSongs}}}
+- Liked Songs (song IDs): {{{likedSongs}}}
+- Swipe History (song IDs): {{{swipeHistory}}}
 
-Based on this data, recommend songs that the user might like. Only return a list of song IDs.
-Ensure that the recommended songs are diverse and align with the user's taste.  Do not recommend songs that are already in their liked songs.
+1. Identify up to 5 key "seed" tracks from the user's liked songs that best represent their core taste.
+2. Use the 'getSpotifyRecommendations' tool with these seed tracks to fetch a list of potential new songs.
+3. From the tool's output, select up to 20 song IDs to recommend to the user.
+4. Ensure you do not recommend songs that are already in the user's liked songs or swipe history.
+5. Return the final list of recommended song IDs.
 `,  
 });
 

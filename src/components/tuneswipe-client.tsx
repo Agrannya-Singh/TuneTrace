@@ -42,19 +42,20 @@ export default function TuneSwipeClient() {
     currentIndexRef.current = val;
   };
   
-  const canSwipe = currentIndex >= 0;
+  const canSwipe = currentIndex >= 0 && currentIndex < songs.length;
 
   const fetchRecommendations = useCallback(async (initialLikedSongs: string[], currentSwipeHistory: string[]) => {
     setAppState('loading');
     try {
+      const allKnownSongs = [...initialLikedSongs, ...currentSwipeHistory];
       const aiInput = {
-        likedSongs: initialLikedSongs.length > 0 ? initialLikedSongs : ['3', '5'], // a fallback if no songs are liked
+        likedSongs: initialLikedSongs.length > 0 ? initialLikedSongs : ['37i9dQZF1DXcBWIGoYBM5M'], // fallback playlist if no liked songs
         swipeHistory: currentSwipeHistory,
       };
       
       const { recommendedSongs: recommendedSongIds } = await recommendSongs(aiInput);
-
-      const existingSongIds = new Set([...songs.map(s => s.id), ...currentSwipeHistory]);
+      
+      const existingSongIds = new Set([...songs.map(s => s.id), ...allKnownSongs]);
       const newSongIds = recommendedSongIds.filter(id => !existingSongIds.has(id));
 
       if (newSongIds.length > 0) {
@@ -62,11 +63,8 @@ export default function TuneSwipeClient() {
         setSongs(prevSongs => [...prevSongs, ...newSongsData]);
         setAppState('ready');
       } else {
-        if(songs.length === currentSwipeHistory.length) {
-          setAppState('outOfCards');
-        } else {
-          setAppState('ready');
-        }
+        // If AI returns no new songs, it means we might be out of good recommendations
+        setAppState('outOfCards');
       }
     } catch (error) {
       console.error('Error fetching recommendations:', error);
@@ -84,14 +82,14 @@ export default function TuneSwipeClient() {
     try {
       const importedIds = await importLikedSongs();
       setLikedSongsFromSpotify(importedIds);
+      // Reset state for new user session
       setSongs([]);
       setSwipeHistory([]);
       updateCurrentIndex(0);
       await fetchRecommendations(importedIds, []);
     } catch (error) {
       console.error('Error importing songs:', error);
-      // If it fails, maybe the token is expired, redirect to login
-      if (error instanceof Error && error.message.includes('401')) {
+      if (error instanceof Error && (error.message.includes('401') || error.message.includes('403'))) {
           router.push('/api/spotify/login');
       } else {
         setAppState('error');
@@ -103,7 +101,7 @@ export default function TuneSwipeClient() {
     if (songs.length > 0) {
       updateCurrentIndex(songs.length - 1);
     }
-  }, [songs]);
+  }, [songs.length]);
 
   const swiped = (direction: 'left' | 'right', song: Song, index: number) => {
     updateCurrentIndex(index - 1);
@@ -123,6 +121,10 @@ export default function TuneSwipeClient() {
   };
 
   const outOfFrame = (songId: string, idx: number) => {
+    const isLastCard = idx === 0;
+    if (isLastCard) {
+        setAppState('outOfCards');
+    }
     // Prefetch when there are 5 cards left
     if (currentIndexRef.current < 5 && songs.length > 5 && appState === 'ready') {
       fetchRecommendations(likedSongsFromSpotify, swipeHistory);
@@ -168,7 +170,7 @@ export default function TuneSwipeClient() {
                   <TinderCard
                     ref={childRefs[index]}
                     className="absolute inset-0"
-                    key={song.id}
+                    key={`${song.id}-${index}`}
                     onSwipe={(dir) => swiped(dir, song, index)}
                     onCardLeftScreen={() => outOfFrame(song.id, index)}
                     preventSwipe={['up', 'down']}
@@ -178,7 +180,7 @@ export default function TuneSwipeClient() {
                 ))
               ) : null }
 
-              {(appState === 'outOfCards' || (appState === 'ready' && currentIndex < 0)) && (
+              {appState === 'outOfCards' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900/80 rounded-xl text-white text-center p-8">
                   <Music className="h-16 w-16 mb-4 text-primary" />
                   <h2 className="text-2xl font-bold">You've reached the end!</h2>

@@ -14,6 +14,7 @@ import { SongCard } from './song-card';
 import { Button } from '@/components/ui/button';
 import { Heart, Loader2, RotateCw, X, Music, Check, ListMusic } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
+import { useRouter } from 'next/navigation';
 
 type AppState = 'initial' | 'loading' | 'ready' | 'outOfCards' | 'error';
 
@@ -24,6 +25,7 @@ export default function TuneSwipeClient() {
   const [swipeHistory, setSwipeHistory] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const { toast } = useToast();
+  const router = useRouter();
 
   const currentIndexRef = useRef(currentIndex);
 
@@ -46,7 +48,7 @@ export default function TuneSwipeClient() {
     setAppState('loading');
     try {
       const aiInput = {
-        likedSongs: initialLikedSongs.length > 0 ? initialLikedSongs : ['3', '5'],
+        likedSongs: initialLikedSongs.length > 0 ? initialLikedSongs : ['3', '5'], // a fallback if no songs are liked
         swipeHistory: currentSwipeHistory,
       };
       
@@ -88,7 +90,12 @@ export default function TuneSwipeClient() {
       await fetchRecommendations(importedIds, []);
     } catch (error) {
       console.error('Error importing songs:', error);
-      setAppState('error');
+      // If it fails, maybe the token is expired, redirect to login
+      if (error instanceof Error && error.message.includes('401')) {
+          router.push('/api/spotify/login');
+      } else {
+        setAppState('error');
+      }
     }
   };
   
@@ -138,9 +145,9 @@ export default function TuneSwipeClient() {
           <div className="text-center flex flex-col items-center justify-center h-full">
             <h1 className="text-5xl font-bold font-headline mb-4 text-white">Welcome to TuneSwipe</h1>
             <p className="text-xl text-neutral-400 mb-8 max-w-md">Discover your next favorite song with a swipe. Connect to Spotify to import your Liked Songs and get personalized recommendations.</p>
-            <Button size="lg" onClick={handleImport} className="bg-primary hover:bg-accent text-primary-foreground">
+            <Button size="lg" onClick={() => router.push('/api/spotify/login')} className="bg-primary hover:bg-accent text-primary-foreground">
               <ListMusic className="mr-2" />
-              Connect & Import Liked Songs
+              Connect with Spotify
             </Button>
           </div>
         );
@@ -199,14 +206,24 @@ export default function TuneSwipeClient() {
           <div className="text-center flex flex-col items-center justify-center h-full text-white">
             <h2 className="text-2xl font-bold text-destructive">Oops, something went wrong.</h2>
             <p className="text-neutral-400 mb-4">We couldn't load your songs. Please try again.</p>
-            <Button onClick={handleImport}>
+            <Button onClick={() => router.push('/api/spotify/login')}>
               <RotateCw className="mr-2" />
-              Try Again
+              Connect with Spotify
             </Button>
           </div>
         );
     }
   };
+
+  useEffect(() => {
+    // This effect runs once on mount to check if we are coming back from Spotify auth
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('authed') === 'true') {
+        handleImport();
+        // Clean up the URL
+        window.history.replaceState({}, document.title, "/");
+    }
+  }, []);
 
   return (
     <div className="bg-background w-screen h-screen overflow-hidden flex flex-col items-center justify-center p-4">

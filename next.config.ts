@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'lastfm.freetls.fastly.net',
+        hostname: 'i.scdn.co',
         port: '',
         pathname: '/**',
       },

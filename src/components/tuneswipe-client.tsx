@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback, createRef } from 'react';
 import type { TinderCardAPI } from 'react-tinder-card';
 import TinderCard from 'react-tinder-card';
-import type { Song } from '@/lib/lastfm';
+import type { Song } from '@/lib/spotify';
 import { SongCard } from './song-card';
 import { Button } from '@/components/ui/button';
 import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download } from 'lucide-react';
@@ -69,7 +69,7 @@ export default function TuneSwipeClient() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Could not fetch songs from Last.fm. Please check credentials and try again.",
+        description: "Could not fetch songs from Spotify. Please check credentials and try again.",
       })
     }
   }, [toast]);
@@ -122,7 +122,7 @@ export default function TuneSwipeClient() {
          return (
           <div className="text-center flex flex-col items-center justify-center h-full text-white">
             <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
-            <p className="text-xl">Loading Top Tracks from Last.fm...</p>
+            <p className="text-xl">Loading Global Top 50 from Spotify...</p>
           </div>
         );
       case 'ready':
@@ -142,6 +142,7 @@ export default function TuneSwipeClient() {
                   >
                     <SongCard 
                       song={song}
+                      isActive={index === currentIndex}
                     />
                   </TinderCard>
                 ))
@@ -208,7 +209,7 @@ export default function TuneSwipeClient() {
         return (
           <div className="text-center flex flex-col items-center justify-center h-full text-white">
             <h2 className="text-2xl font-bold text-destructive">Oops, something went wrong.</h2>
-            <p className="text-neutral-400 mb-4">We couldn't load songs from Last.fm.</p>
+            <p className="text-neutral-400 mb-4">We couldn't load songs from Spotify.</p>
             <Button onClick={fetchSongs}>
               <RotateCw className="mr-2" />
               Try Again

@@ -3,4 +3,5 @@ export interface Song {
   title: string;
   artist: string;
   albumArtUrl: string;
+  previewUrl: string | null;
 }

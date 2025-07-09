@@ -10,14 +10,18 @@ export interface Song {
 }
 
 const getApi = async (path: string) => {
-    // This is a simplified fetch for server-side components using our proxy.
-    // We construct the path directly instead of relying on an environment variable.
-    const res = await fetch(`/api/spotify/${path}`, {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
+    const apiUrl = `${baseUrl}/api/spotify/${path}`;
+    
+    console.log(`[Server-side] Fetching from API proxy: ${apiUrl}`);
+
+    const res = await fetch(apiUrl, {
       cache: 'no-store', // Ensure we get fresh data
     });
+
     if (!res.ok) {
         const errorBody = await res.text();
-        console.error(`[Client] Failed to fetch /api/spotify/${path}: ${res.status}`, errorBody);
+        console.error(`[Server-side] Failed to fetch ${apiUrl}: ${res.status}`, errorBody);
         throw new Error(`Failed to fetch ${path}: ${res.status}`);
     }
     return res.json();

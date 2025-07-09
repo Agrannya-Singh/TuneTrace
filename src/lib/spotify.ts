@@ -10,13 +10,14 @@ export interface Song {
 }
 
 const getApi = async (path: string) => {
-    // This is a simplified fetch for server-side components using our proxy
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/spotify/${path}`, {
+    // This is a simplified fetch for server-side components using our proxy.
+    // We construct the path directly instead of relying on an environment variable.
+    const res = await fetch(`/api/spotify/${path}`, {
       cache: 'no-store', // Ensure we get fresh data
     });
     if (!res.ok) {
         const errorBody = await res.text();
-        console.error(`Failed to fetch ${path}: ${res.status}`, errorBody);
+        console.error(`[Client] Failed to fetch /api/spotify/${path}: ${res.status}`, errorBody);
         throw new Error(`Failed to fetch ${path}: ${res.status}`);
     }
     return res.json();
@@ -25,7 +26,7 @@ const getApi = async (path: string) => {
 const GLOBAL_TOP_50_PLAYLIST_ID = '37i9dQZEVXbMDoHDwVN2tF';
 
 export const getGlobalTopSongs = async (): Promise<Song[]> => {
-    console.log('Fetching Global Top 50 from Spotify...');
+    console.log('[Client] Fetching Global Top 50 from Spotify via proxy...');
     const { items } = await getApi(`playlists/${GLOBAL_TOP_50_PLAYLIST_ID}/tracks?limit=50`);
     
     return items

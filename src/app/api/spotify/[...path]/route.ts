@@ -8,25 +8,27 @@ const spotifyApi = new SpotifyWebApi({
 
 // Helper to get a valid access token using client credentials
 async function getClientCredentialsToken() {
-    // Check if we have a valid token in memory (simple cache)
-    if (spotifyApi.getAccessToken() && (spotifyApi as any)._credentials.tokenExpirationNumber > Date.now()) {
+    // spotify-web-api-node doesn't expose token expiration, so we manage it manually.
+    // @ts-ignore - _credentials is not in the type definition
+    if (spotifyApi.getAccessToken() && spotifyApi._credentials.tokenExpirationNumber > Date.now()) {
         return spotifyApi.getAccessToken();
     }
     
-    console.log('Fetching new Spotify client credentials access token...');
+    console.log('[API Proxy] No valid token, fetching new Spotify client credentials access token...');
     try {
         const data = await spotifyApi.clientCredentialsGrant();
         const accessToken = data.body['access_token'];
         const expiresIn = data.body['expires_in'];
         
         spotifyApi.setAccessToken(accessToken);
-        // Set a slightly earlier expiration to be safe
-        (spotifyApi as any)._credentials.tokenExpirationNumber = Date.now() + (expiresIn - 300) * 1000;
+        // Set a slightly earlier expiration to be safe (5 minutes earlier)
+        // @ts-ignore
+        spotifyApi._credentials.tokenExpirationNumber = Date.now() + (expiresIn - 300) * 1000;
 
-        console.log('New access token obtained.');
+        console.log('[API Proxy] New access token obtained.');
         return accessToken;
     } catch (error) {
-        console.error('Could not get client credentials token', error);
+        console.error('[API Proxy] Could not get client credentials token from Spotify.', error);
         return null;
     }
 }
@@ -37,14 +39,15 @@ async function handler(req: NextRequest, { params }: { params: { path: string[] 
     const path = params.path.join('/');
     const { searchParams } = new URL(req.url);
 
-    // All paths are treated as proxied API calls using client credentials
     const accessToken = await getClientCredentialsToken();
     if (!accessToken) {
-        return new NextResponse('Unauthorized', { status: 401 });
+        // If we can't get a token, it's an internal server error.
+        // The previous function already logged the detailed error.
+        return new NextResponse(JSON.stringify({ error: 'Could not authenticate with Spotify.' }), { status: 500 });
     }
     
-    // Construct the Spotify API URL
     const spotifyUrl = `https://api.spotify.com/v1/${path}?${searchParams.toString()}`;
+    console.log(`[API Proxy] Forwarding request to: ${spotifyUrl}`);
 
     try {
         const spotifyResponse = await fetch(spotifyUrl, {
@@ -53,17 +56,17 @@ async function handler(req: NextRequest, { params }: { params: { path: string[] 
             },
         });
 
+        const responseBody = await spotifyResponse.text();
+
         if (!spotifyResponse.ok) {
-            const error = await spotifyResponse.json();
-            console.error('Spotify API Error:', error);
-            return new NextResponse(JSON.stringify(error), { status: spotifyResponse.status });
+            console.error(`[API Proxy] Spotify API Error (${spotifyResponse.status}):`, responseBody);
+            return new NextResponse(responseBody, { status: spotifyResponse.status, headers: { 'Content-Type': 'application/json' } });
         }
 
-        const data = await spotifyResponse.json();
-        return NextResponse.json(data);
+        return new NextResponse(responseBody, { status: 200, headers: { 'Content-Type': 'application/json' } });
     } catch(error) {
-        console.error('Proxy Error:', error);
-        return new NextResponse('Internal Server Error', { status: 500 });
+        console.error('[API Proxy] Internal proxy error:', error);
+        return new NextResponse(JSON.stringify({ error: 'Internal Server Error while contacting Spotify.' }), { status: 500 });
     }
 }
 

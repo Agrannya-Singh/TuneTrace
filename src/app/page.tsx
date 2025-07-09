@@ -1,3 +1,9 @@
+import TuneSwipeClient from '@/components/tuneswipe-client';
+
 export default function Home() {
-  return <></>;
+  return (
+    <main>
+      <TuneSwipeClient />
+    </main>
+  );
 }

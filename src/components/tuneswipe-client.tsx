@@ -6,7 +6,7 @@ import TinderCard from 'react-tinder-card';
 import type { Song } from '@/lib/spotify';
 import { SongCard } from './song-card';
 import { Button } from '@/components/ui/button';
-import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download, Volume2, VolumeX } from 'lucide-react';
+import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
@@ -137,14 +137,16 @@ export default function TuneSwipeClient() {
   };
 
   const toggleMute = () => {
-    setIsMuted(!isMuted);
-    if (audioRef.current) {
-      if (audioRef.current.paused) {
-        audioRef.current.play().catch(console.error);
-      } else {
-        audioRef.current.pause();
-      }
-    }
+    setIsMuted(prev => {
+        const newMutedState = !prev;
+        if (audioRef.current) {
+            audioRef.current.muted = newMutedState;
+            if (!newMutedState && audioRef.current.paused) {
+                audioRef.current.play().catch(console.error);
+            }
+        }
+        return newMutedState;
+    });
   };
   
   const renderContent = () => {

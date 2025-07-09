@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import type { TinderCardAPI } from 'react-tinder-card';
 import TinderCard from 'react-tinder-card';
-import type { Song } from '@/lib/spotify';
+import type { Song } from '@/lib/lastfm';
 import { SongCard } from './song-card';
 import { Button } from '@/components/ui/button';
 import { Heart, Loader2, RotateCw, X, Music } from 'lucide-react';
@@ -15,14 +15,8 @@ export default function TuneSwipeClient() {
   const [appState, setAppState] = useState<AppState>('loading');
   const [songs, setSongs] = useState<Song[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
   const { toast } = useToast();
 
-  const audioRefs = useMemo(() =>
-    Array(songs.length).fill(0).map(() => useRef<HTMLAudioElement>(null)),
-    [songs]
-  );
-  
   const currentIndexRef = useRef(currentIndex);
 
   const childRefs = useMemo(
@@ -33,31 +27,9 @@ export default function TuneSwipeClient() {
     [songs]
   );
   
-  const playCurrentSong = useCallback((index: number) => {
-    const audioRef = audioRefs[index];
-    if (audioRef?.current) {
-        audioRef.current.volume = 0.5;
-        audioRef.current.play().catch(e => console.log("Audio play failed, user interaction needed."));
-    }
-  }, [audioRefs]);
-  
-  const stopCurrentSong = useCallback((index: number) => {
-    const audioRef = audioRefs[index];
-    if (audioRef?.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-    }
-  }, [audioRefs]);
-  
   const updateCurrentIndex = (val: number) => {
-    if (currentIndexRef.current >= 0 && currentIndexRef.current < songs.length) {
-        stopCurrentSong(currentIndexRef.current);
-    }
     setCurrentIndex(val);
     currentIndexRef.current = val;
-    if (val >= 0 && val < songs.length) {
-        playCurrentSong(val);
-    }
   };
 
   const canSwipe = currentIndex >= 0 && currentIndex < songs.length;
@@ -69,11 +41,11 @@ export default function TuneSwipeClient() {
       if (!res.ok) {
         throw new Error(`Server responded with ${res.status}`);
       }
-      const globalSongs = await res.json();
+      const topSongs = await res.json();
       
-      setSongs(globalSongs);
-      updateCurrentIndex(globalSongs.length - 1);
-      if (globalSongs.length > 0) {
+      setSongs(topSongs);
+      setCurrentIndex(topSongs.length - 1);
+      if (topSongs.length > 0) {
         setAppState('ready');
       } else {
         setAppState('outOfCards');
@@ -84,10 +56,10 @@ export default function TuneSwipeClient() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Could not fetch songs from Spotify. Please check credentials and try again.",
+        description: "Could not fetch songs from Last.fm. Please check credentials and try again.",
       })
     }
-  }, [toast, playCurrentSong]);
+  }, [toast]);
 
   useEffect(() => {
     fetchSongs();
@@ -110,23 +82,18 @@ export default function TuneSwipeClient() {
     if (canSwipe && currentIndex < songs.length) {
       const cardRef = childRefs[currentIndex];
       if (cardRef && cardRef.current) {
-        // The swiped callback will handle index updates and audio
         await cardRef.current.swipe(dir);
       }
     }
   };
   
-  const handleMuteToggle = () => {
-    setIsMuted(prev => !prev);
-  }
-
   const renderContent = () => {
     switch (appState) {
       case 'loading':
          return (
           <div className="text-center flex flex-col items-center justify-center h-full text-white">
             <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
-            <p className="text-xl">Loading Global Top 50...</p>
+            <p className="text-xl">Loading Top Tracks from Last.fm...</p>
           </div>
         );
       case 'ready':
@@ -146,10 +113,6 @@ export default function TuneSwipeClient() {
                   >
                     <SongCard 
                       song={song}
-                      audioRef={audioRefs[index]}
-                      isPlaying={index === currentIndex}
-                      onMuteToggle={handleMuteToggle}
-                      isMuted={isMuted}
                     />
                   </TinderCard>
                 ))
@@ -159,7 +122,7 @@ export default function TuneSwipeClient() {
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900/80 rounded-xl text-white text-center p-8">
                   <Music className="h-16 w-16 mb-4 text-primary" />
                   <h2 className="text-2xl font-bold">You've reached the end!</h2>
-                  <p className="text-neutral-300 mb-4">You've swiped through the Global Top 50.</p>
+                  <p className="text-neutral-300 mb-4">You've swiped through the top tracks.</p>
                   <Button onClick={fetchSongs}>
                     <RotateCw className="mr-2" />
                     Reload Playlist
@@ -182,7 +145,7 @@ export default function TuneSwipeClient() {
         return (
           <div className="text-center flex flex-col items-center justify-center h-full text-white">
             <h2 className="text-2xl font-bold text-destructive">Oops, something went wrong.</h2>
-            <p className="text-neutral-400 mb-4">We couldn't load songs from Spotify.</p>
+            <p className="text-neutral-400 mb-4">We couldn't load songs from Last.fm.</p>
             <Button onClick={fetchSongs}>
               <RotateCw className="mr-2" />
               Try Again

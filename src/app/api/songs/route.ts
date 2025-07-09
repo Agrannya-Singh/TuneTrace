@@ -1,64 +1,37 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import SpotifyWebApi from 'spotify-web-api-node';
-import type { Song } from '@/lib/spotify';
+import type { Song } from '@/lib/lastfm';
 
-const spotifyApi = new SpotifyWebApi({
-  clientId: process.env.SPOTIFY_CLIENT_ID,
-  clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-});
+const LASTFM_API_KEY = process.env.LASTFM_API_KEY;
+const API_URL = 'https://ws.audioscrobbler.com/2.0/?method=chart.gettoptracks&api_key=' + LASTFM_API_KEY + '&format=json&limit=50';
 
-// A simple in-memory cache for the access token
-let tokenCache = {
-  accessToken: null as string | null,
-  expirationTime: 0,
-};
-
-async function getClientCredentialsToken() {
-    if (tokenCache.accessToken && tokenCache.expirationTime > Date.now()) {
-        spotifyApi.setAccessToken(tokenCache.accessToken);
-        return tokenCache.accessToken;
-    }
-    
-    console.log('[API/Songs] No valid token, fetching new Spotify client credentials access token...');
-    try {
-        const data = await spotifyApi.clientCredentialsGrant();
-        const accessToken = data.body['access_token'];
-        const expiresIn = data.body['expires_in'];
-        
-        spotifyApi.setAccessToken(accessToken);
-        // Set expiration to 5 minutes before it actually expires to be safe
-        tokenCache.expirationTime = Date.now() + (expiresIn - 300) * 1000;
-        tokenCache.accessToken = accessToken;
-
-        console.log('[API/Songs] New access token obtained.');
-        return accessToken;
-    } catch (error) {
-        console.error('[API/Songs] Could not get client credentials token from Spotify.', error);
-        tokenCache.accessToken = null;
-        tokenCache.expirationTime = 0;
-        return null;
-    }
-}
-
-const GLOBAL_TOP_50_PLAYLIST_ID = '37i9dQZEVXbMDoHDwVN2tF';
 
 export async function GET(req: NextRequest) {
-    const token = await getClientCredentialsToken();
-    if (!token) {
-        return new NextResponse(JSON.stringify({ error: 'Could not authenticate with Spotify.' }), { status: 500 });
+    if (!LASTFM_API_KEY) {
+        return new NextResponse(JSON.stringify({ error: 'Last.fm API key not configured.' }), { status: 500 });
     }
 
     try {
-        const data = await spotifyApi.getPlaylistTracks(GLOBAL_TOP_50_PLAYLIST_ID, { limit: 50 });
-        const songs: Song[] = data.body.items
+        const res = await fetch(API_URL, {
+            headers: {
+                'User-Agent': 'TuneTrace/1.0'
+            }
+        });
+
+        if (!res.ok) {
+            throw new Error(`Last.fm API responded with ${res.status}`);
+        }
+
+        const data = await res.json();
+        
+        const songs: Song[] = data.tracks.track
             .map((item: any) => {
-                if (!item.track || !item.track.id || !item.track.preview_url) return null;
+                if (!item.name || !item.artist || !item.image) return null;
+                const albumArt = item.image.find((i: any) => i.size === 'extralarge');
                 return {
-                    id: item.track.id,
-                    title: item.track.name,
-                    artist: item.track.artists.map((a:any) => a.name).join(', '),
-                    albumArtUrl: item.track.album.images[0]?.url || 'https://placehold.co/600x600.png',
-                    previewUrl: item.track.preview_url,
+                    id: item.mbid || `${item.name}-${item.artist.name}`, // Use mbid or create a fallback id
+                    title: item.name,
+                    artist: item.artist.name,
+                    albumArtUrl: albumArt['#text'] || 'https://placehold.co/600x600.png',
                 }
             })
             .filter((song: Song | null): song is Song => song !== null);
@@ -66,7 +39,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json(songs);
 
     } catch (error) {
-        console.error('[API/Songs] Error fetching playlist from Spotify:', error);
-        return new NextResponse(JSON.stringify({ error: 'Failed to fetch playlist from Spotify.' }), { status: 502 });
+        console.error('[API/Songs] Error fetching tracks from Last.fm:', error);
+        return new NextResponse(JSON.stringify({ error: 'Failed to fetch tracks from Last.fm.' }), { status: 502 });
     }
 }

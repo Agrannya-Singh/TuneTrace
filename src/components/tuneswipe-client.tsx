@@ -6,14 +6,25 @@ import TinderCard from 'react-tinder-card';
 import type { Song } from '@/lib/lastfm';
 import { SongCard } from './song-card';
 import { Button } from '@/components/ui/button';
-import { Heart, Loader2, RotateCw, X, Music } from 'lucide-react';
+import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type AppState = 'loading' | 'ready' | 'outOfCards' | 'error';
 
 export default function TuneSwipeClient() {
   const [appState, setAppState] = useState<AppState>('loading');
   const [songs, setSongs] = useState<Song[]>([]);
+  const [likedSongs, setLikedSongs] = useState<Song[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [childRefs, setChildRefs] = useState<React.RefObject<TinderCardAPI>[]>([]);
 
@@ -38,6 +49,7 @@ export default function TuneSwipeClient() {
 
   const fetchSongs = useCallback(async () => {
     setAppState('loading');
+    setLikedSongs([]); // Reset liked songs on new fetch
     try {
       const res = await fetch('/api/songs');
       if (!res.ok) {
@@ -68,7 +80,10 @@ export default function TuneSwipeClient() {
   }, []); // Run only on initial mount
 
 
-  const swiped = (index: number) => {
+  const swiped = (direction: 'left' | 'right', song: Song, index: number) => {
+    if (direction === 'right') {
+        setLikedSongs((prev) => [...prev, song]);
+    }
     updateCurrentIndex(index - 1);
   };
 
@@ -86,6 +101,19 @@ export default function TuneSwipeClient() {
         await cardRef.current.swipe(dir);
       }
     }
+  };
+
+  const downloadLikedSongs = () => {
+    const content = likedSongs.map(song => `${song.title} - ${song.artist}`).join('\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tunetrace-liked-songs.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
   
   const renderContent = () => {
@@ -108,7 +136,7 @@ export default function TuneSwipeClient() {
                     ref={childRefs[index]}
                     className="absolute inset-0"
                     key={song.id}
-                    onSwipe={() => swiped(index)}
+                    onSwipe={(dir) => swiped(dir, song, index)}
                     onCardLeftScreen={() => outOfFrame(song.id, index)}
                     preventSwipe={['up', 'down']}
                   >
@@ -136,8 +164,42 @@ export default function TuneSwipeClient() {
               <Button variant="outline" size="icon" className="w-20 h-20 rounded-full bg-white/10 border-red-500/50 text-red-500 hover:bg-red-500/20 hover:text-red-400 disabled:opacity-50 transition-all transform hover:scale-110" onClick={() => swipe('left')} disabled={!canSwipe}>
                 <X className="h-10 w-10" />
               </Button>
-              <Button variant="outline" size="icon" className="w-24 h-24 rounded-full bg-white/10 border-primary/50 text-primary hover:bg-primary/20 hover:text-green-400 disabled:opacity-50 transition-all transform hover:scale-110" onClick={() => swipe('right')} disabled={!canSwipe}>
-                <Heart className="h-12 w-12" />
+               <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="icon" className="w-16 h-16 rounded-full bg-white/10 border-blue-500/50 text-blue-500 hover:bg-blue-500/20 hover:text-blue-400 disabled:opacity-50 transition-all">
+                      <ListMusic className="h-8 w-8" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Liked Songs</DialogTitle>
+                    <DialogDescription>
+                      Here are the songs you've liked. You can download this list as a text file.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <ScrollArea className="h-72 w-full rounded-md border p-4">
+                     {likedSongs.length > 0 ? (
+                        <ul className="space-y-2">
+                          {likedSongs.map((song) => (
+                            <li key={song.id} className="text-sm">
+                              {song.title} - <span className="text-muted-foreground">{song.artist}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center">You haven't liked any songs yet.</p>
+                      )}
+                  </ScrollArea>
+                  <DialogFooter>
+                    <Button onClick={downloadLikedSongs} disabled={likedSongs.length === 0}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Download List
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              <Button variant="outline" size="icon" className="w-20 h-20 rounded-full bg-white/10 border-primary/50 text-primary hover:bg-primary/20 hover:text-green-400 disabled:opacity-50 transition-all transform hover:scale-110" onClick={() => swipe('right')} disabled={!canSwipe}>
+                <Heart className="h-10 w-10" />
               </Button>
             </div>
           </div>

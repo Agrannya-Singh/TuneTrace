@@ -51,25 +51,45 @@ async function getAccessToken() {
 export async function GET(req: NextRequest) {
   try {
     const token = await getAccessToken();
-    const playlistId = '37i9dQZEVXbMDoHDwVN2tF'; // Spotify's Global Top 50 Playlist ID
-    const url = `${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks?limit=50&fields=items(track(id,name,artists(name),album(images),preview_url))`;
 
-    const res = await fetch(url, {
+    // 1. Fetch a list of featured playlists
+    const featuredPlaylistsUrl = `${SPOTIFY_API_BASE}/browse/featured-playlists?limit=1&country=US`;
+    const featuredPlaylistsRes = await fetch(featuredPlaylistsUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-cache',
+    });
+    
+    if (!featuredPlaylistsRes.ok) {
+      const errorBody = await featuredPlaylistsRes.text();
+      console.error(`Spotify Featured Playlists API responded with ${featuredPlaylistsRes.status}`, errorBody);
+      throw new Error(`Spotify Featured Playlists API responded with ${featuredPlaylistsRes.status}`);
+    }
+
+    const featuredPlaylistsData = await featuredPlaylistsRes.json();
+    const playlistId = featuredPlaylistsData.playlists?.items?.[0]?.id;
+
+    if (!playlistId) {
+      throw new Error("Could not find a featured playlist from Spotify.");
+    }
+    
+    // 2. Fetch tracks from that playlist ID
+    const tracksUrl = `${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks?limit=50&fields=items(track(id,name,artists(name),album(images),preview_url))`;
+    const tracksRes = await fetch(tracksUrl, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
       cache: 'no-cache',
     });
 
-    if (!res.ok) {
-        const errorBody = await res.text();
-        console.error(`Spotify Playlist API responded with ${res.status}`, errorBody);
-        throw new Error(`Spotify Playlist API responded with ${res.status}`);
+    if (!tracksRes.ok) {
+        const errorBody = await tracksRes.text();
+        console.error(`Spotify Playlist Tracks API responded with ${tracksRes.status}`, errorBody);
+        throw new Error(`Spotify Playlist Tracks API responded with ${tracksRes.status}`);
     }
 
-    const data = await res.json();
+    const tracksData = await tracksRes.json();
 
-    const songs: Song[] = data.items
+    const songs: Song[] = tracksData.items
       .map((item: any) => {
         if (!item.track || !item.track.id || !item.track.album.images.length) {
           return null;

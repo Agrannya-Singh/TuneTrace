@@ -88,15 +88,7 @@ export default function TuneSwipeClient() {
   }, [toast]);
 
   const handleFindSongs = () => {
-    if (selectedGenres.length > 0) {
       fetchSongs(selectedGenres, selectedMoods);
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Missing Genre",
-        description: "Please select at least one genre to start discovering music.",
-      });
-    }
   };
   
   const handleRestart = () => {
@@ -169,14 +161,14 @@ a.href = url;
             <CardHeader>
               <CardTitle className="text-2xl">Find Your Vibe</CardTitle>
               <CardDescription>
-                Select your desired genres and moods to get song recommendations.
+                Select your desired genres and moods to get song recommendations. If you leave it blank, we'll show you the current top charts.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={(e) => { e.preventDefault(); handleFindSongs(); }}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label className="text-lg font-semibold mb-2 block">Genres (Required)</Label>
+                    <Label className="text-lg font-semibold mb-2 block">Genres</Label>
                     <ScrollArea className="h-48 p-4 border rounded-md">
                       <div className="space-y-2">
                         {genres.map(genre => (
@@ -195,7 +187,7 @@ a.href = url;
                     </ScrollArea>
                   </div>
                   <div>
-                    <Label className="text-lg font-semibold mb-2 block">Moods (Optional)</Label>
+                    <Label className="text-lg font-semibold mb-2 block">Moods</Label>
                      <ScrollArea className="h-48 p-4 border rounded-md">
                       <div className="space-y-2">
                         {moods.map(mood => (

@@ -31,12 +31,13 @@ export async function GET(req: NextRequest) {
   const mood = searchParams.get('mood') || '';
   const genre = searchParams.get('genre') || 'popular music';
   
-  const useChart = !mood && genre === 'popular music';
+  const useChart = !mood && !genre;
 
   try {
     let initialItems: any[] = [];
 
     if (useChart) {
+      // Use "popular music" as a default if no genre/mood is provided
       const params = new URLSearchParams({
         part: 'snippet,contentDetails', // Fetch contentDetails for duration
         chart: 'mostPopular',
@@ -53,7 +54,7 @@ export async function GET(req: NextRequest) {
     } else {
       const query = `${mood} ${genre} official music video`.trim();
       const params = new URLSearchParams({
-        part: 'snippet',
+        part: 'snippet', // Search API can't fetch contentDetails directly
         q: query,
         type: 'video',
         videoCategoryId: '10',
@@ -104,7 +105,7 @@ export async function GET(req: NextRequest) {
         }
 
         // Filter out common non-music keywords
-        const disallowedKeywords = ['short', 'shorts', 'commentary', 'reaction', 'live', 'interview'];
+        const disallowedKeywords = ['short', 'shorts', 'commentary', 'reaction', 'live', 'interview', 'full album'];
         if (disallowedKeywords.some(keyword => title.includes(keyword))) {
           return false;
         }
@@ -112,6 +113,7 @@ export async function GET(req: NextRequest) {
         return true;
       })
       .map((item: any) => {
+        // ID can be directly from `item.id` (for /videos endpoint) or `item.id.videoId` (from /search)
         const videoId = typeof item.id === 'string' ? item.id : item.id.videoId;
         return {
           id: videoId,

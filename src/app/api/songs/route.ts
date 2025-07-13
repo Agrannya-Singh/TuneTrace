@@ -34,7 +34,6 @@ export async function GET(req: NextRequest) {
   const useChart = !mood && genre === 'popular music';
 
   try {
-    let videoIds: string[] = [];
     let initialItems: any[] = [];
 
     if (useChart) {
@@ -113,12 +112,13 @@ export async function GET(req: NextRequest) {
         return true;
       })
       .map((item: any) => {
+        const videoId = typeof item.id === 'string' ? item.id : item.id.videoId;
         return {
-          id: item.id,
+          id: videoId,
           title: item.snippet.title,
           artist: item.snippet.channelTitle,
           albumArtUrl: item.snippet.thumbnails.high.url,
-          previewUrl: `https://www.youtube.com/embed/${item.id}`,
+          previewUrl: `https://www.youtube.com/embed/${videoId}`,
         };
       });
 
@@ -129,4 +129,4 @@ export async function GET(req: NextRequest) {
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return new NextResponse(JSON.stringify({ error: `Failed to fetch tracks from YouTube. Reason: ${errorMessage}` }), { status: 502 });
   }
-     
+}

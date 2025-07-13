@@ -8,7 +8,8 @@ const SwipeCard = ({ track, onSwipe }) => {
   // Genius API does not provide audio previews directly.
   // This function uses the YouTube API to find a preview.
   const handlePreview = async () => {
-    const YOUTUBE_API_KEY = "AIzaSyCVSyC30V9I9OOlUZEGH_ot_Zzq3_a27FQ"; 
+    const YOUTUBE_API_KEY = " "; //provide API key here
+    
 
     const query = `${track.name} ${track.artist.name} official audio`;
     try {

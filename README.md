@@ -21,7 +21,7 @@ TuneSwipe is a fresh, interactive way to find your next favorite song. We've thr
   - **SWIPE LEFT** to skip and move on to the next discovery.
 
 - **Instant Previews, Powered by YouTube ▶️**
-  Hear something you like? Just click on the card to get an instant preview directly from YouTube. No more guessing—know if it's a hit before you commit.
+  Hear something you like? Just click on the card to get an instant preview directly from YouTube. No more guessing ,know if it's a hit before you commit.
 
 - **Your Personal Mixtape 💾**
   Every song you swipe right on is saved to your "Liked Songs" list. When you're done, you can easily download your new mixtape as a simple text file, ready to be added to your favorite streaming service.

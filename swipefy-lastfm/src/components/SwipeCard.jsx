@@ -5,11 +5,13 @@ import TinderCard from 'react-tinder-card';
 const SwipeCard = ({ track, onSwipe }) => {
   const [previewUrl, setPreviewUrl] = useState('');
 
-  // Genius API does not provide audio previews. This is a placeholder.
+  // Genius API does not provide audio previews directly.
+  // This function uses the YouTube API to find a preview.
+  // You must provide your own YouTube API key for this to work.
   const handlePreview = async () => {
-    const YOUTUBE_API_KEY = "your-youtube-api-key";
+    const YOUTUBE_API_KEY = "your-youtube-api-key"; // IMPORTANT: Replace with your actual YouTube API key
     if (YOUTUBE_API_KEY === "your-youtube-api-key") {
-      alert("YouTube API key needed for previews. Please add it to SwipeCard.jsx.");
+      alert("A YouTube API key is needed for song previews. Please add your key to swipefy-lastfm/src/components/SwipeCard.jsx.");
       return;
     }
 
@@ -27,7 +29,7 @@ const SwipeCard = ({ track, onSwipe }) => {
       }
     } catch (error) {
       console.error('Error fetching preview:', error);
-      alert('Error fetching preview. Check console and ensure your YouTube API key is valid.');
+      alert('Error fetching preview. Check your console and ensure your YouTube API key is valid and has the YouTube Data API v3 enabled.');
     }
   };
 

@@ -9,6 +9,7 @@ import { SongCard } from './song-card';
 import { Button } from '@/components/ui/button';
 import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download, Info, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
+import { recommendSongs } from '@/ai/flows/song-recommender';
 import {
   Dialog,
   DialogContent,
@@ -43,49 +44,116 @@ export default function TuneSwipeClient() {
   
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
+  const [isFetchingRecommendations, setIsFetchingRecommendations] = useState(false);
 
   const { toast } = useToast();
 
   const currentIndexRef = useRef(currentIndex);
 
-  const fetchSongs = useCallback(async (genres: string[], moods: string[]) => {
-    setAppState('loading');
-    setLikedSongs([]); // Reset liked songs on new fetch
-    try {
-      const genreQuery = genres.join(' ');
-      const moodQuery = moods.join(' ');
-      const params = new URLSearchParams({
-        mood: moodQuery,
-        genre: genreQuery,
-      });
+  const fetchSongs = useCallback(async (genres: string[], moods: string[], songQueries: string[] = []) => {
+    if (songQueries.length > 0) {
+      // Don't change app state when fetching recommendations in the background
+      setIsFetchingRecommendations(true);
+    } else {
+      setAppState('loading');
+      setLikedSongs([]); // Reset liked songs on new search
+    }
 
-      const res = await fetch(`/api/songs?${params.toString()}`);
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'An unknown error occurred' }));
-        throw new Error(errorData.error || `Server responded with ${res.status}`);
-      }
-      const topSongs: Song[] = await res.json();
-      
-      if (topSongs.length > 0) {
-        const shuffledSongs = topSongs.sort(() => Math.random() - 0.5);
-        setSongs(shuffledSongs);
-        setChildRefs(Array(shuffledSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
-        setCurrentIndex(shuffledSongs.length - 1);
-        setAppState('ready');
+    try {
+      let fetchedSongs: Song[];
+      if(songQueries.length > 0) {
+        // Fetch specific songs recommended by AI
+        const promises = songQueries.map(query => {
+            const params = new URLSearchParams({ mood: '', genre: query });
+            return fetch(`/api/songs?${params.toString()}`).then(res => res.json());
+        });
+        const results = await Promise.all(promises);
+        fetchedSongs = results.flat().filter(song => song); // Flatten and remove any nulls
       } else {
+        // Fetch based on user's mood/genre selection
+        const genreQuery = genres.join(' ');
+        const moodQuery = moods.join(' ');
+        const params = new URLSearchParams({
+          mood: moodQuery,
+          genre: genreQuery,
+        });
+        const res = await fetch(`/api/songs?${params.toString()}`);
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({ error: 'An unknown error occurred' }));
+          throw new Error(errorData.error || `Server responded with ${res.status}`);
+        }
+        fetchedSongs = await res.json();
+      }
+      
+      if (fetchedSongs.length > 0) {
+        const shuffledSongs = fetchedSongs.sort(() => Math.random() - 0.5);
+        
+        if(songQueries.length > 0) {
+          // Add recommended songs to the front of the swipe queue
+          setSongs(prevSongs => {
+            const existingIds = new Set(prevSongs.map(s => s.id));
+            const newSongs = shuffledSongs.filter(s => !existingIds.has(s.id));
+            const updatedSongs = [...newSongs, ...prevSongs.slice(currentIndexRef.current)];
+            setChildRefs(Array(updatedSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
+            setCurrentIndex(updatedSongs.length - 1);
+            return updatedSongs;
+          });
+        } else {
+          // This is a new search, so replace the song list
+          setSongs(shuffledSongs);
+          setChildRefs(Array(shuffledSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
+          setCurrentIndex(shuffledSongs.length - 1);
+          setAppState('ready');
+        }
+      } else if (songQueries.length === 0) {
         setAppState('outOfCards');
       }
     } catch (error) {
       console.error('Error fetching songs:', error);
-      setAppState('error');
-      const errorMessage = error instanceof Error ? error.message : "Could not fetch songs. Please try again later.";
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: errorMessage,
-      })
+      if (songQueries.length === 0) {
+        setAppState('error');
+        const errorMessage = error instanceof Error ? error.message : "Could not fetch songs. Please try again later.";
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: errorMessage,
+        })
+      }
+    } finally {
+      if (songQueries.length > 0) {
+        setIsFetchingRecommendations(false);
+      }
     }
   }, [toast]);
+
+
+  const getRecommendations = useCallback(async () => {
+    if (isFetchingRecommendations) return;
+
+    const likedSongInfo = likedSongs.map(s => `${s.title} by ${s.artist}`);
+    try {
+      const result = await recommendSongs({ likedSongs: likedSongInfo });
+      if (result.recommendations && result.recommendations.length > 0) {
+        const queries = result.recommendations.map(r => `${r.title} ${r.artist}`);
+        await fetchSongs([], [], queries);
+      }
+    } catch(e) {
+      console.error("Failed to get AI recommendations", e);
+       toast({
+        variant: "default",
+        title: "AI Note",
+        description: "Could not fetch AI recommendations at this time.",
+      })
+    }
+  }, [likedSongs, fetchSongs, isFetchingRecommendations, toast]);
+
+  useEffect(() => {
+    // After 5 liked songs, fetch recommendations
+    if (likedSongs.length > 0 && likedSongs.length % 5 === 0) {
+        getRecommendations();
+    }
+  }, [likedSongs, getRecommendations]);
+
 
   const handleFindSongs = () => {
       fetchSongs(selectedGenres, selectedMoods);
@@ -127,7 +195,11 @@ export default function TuneSwipeClient() {
   const outOfFrame = (songId: string, idx: number) => {
     const isLastCard = idx === 0;
     if (isLastCard) {
-      setAppState('outOfCards');
+      if (likedSongs.length > 0) {
+        getRecommendations();
+      } else {
+        setAppState('outOfCards');
+      }
     }
   };
 
@@ -226,12 +298,12 @@ a.href = url;
         return (
           <div className="flex flex-col items-center justify-center w-full h-full">
             <div className="w-full max-w-sm h-[60vh] md:max-w-md md:h-[65vh] relative">
-              {songs.length > 0 && childRefs.length > 0 ? (
+              {songs.length > 0 && childRefs.length > 0 && currentIndex < songs.length ? (
                 songs.map((song, index) => (
                   <TinderCard
                     ref={childRefs[index]}
                     className="absolute inset-0"
-                    key={song.id}
+                    key={`${song.id}-${index}`}
                     onSwipe={(dir) => swiped(dir, song, index)}
                     onCardLeftScreen={() => outOfFrame(song.id, index)}
                     preventSwipe={['up', 'down']}
@@ -244,15 +316,25 @@ a.href = url;
                 ))
               ) : null }
 
-              {appState === 'outOfCards' && (
+              {(appState === 'outOfCards' || (songs.length > 0 && currentIndex < 0)) && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900/80 rounded-xl text-white text-center p-8">
-                  <Music className="h-16 w-16 mb-4 text-primary" />
-                  <h2 className="text-2xl font-bold">You've reached the end!</h2>
-                  <p className="text-neutral-300 mb-4">You've swiped through all the tracks for this vibe.</p>
-                  <Button onClick={handleRestart}>
-                    <RotateCw className="mr-2" />
-                    Start New Search
-                  </Button>
+                  {isFetchingRecommendations ? (
+                     <>
+                      <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
+                      <h2 className="text-2xl font-bold">AI is thinking...</h2>
+                      <p className="text-neutral-300">Finding new tracks based on your taste.</p>
+                     </>
+                  ) : (
+                    <>
+                      <Music className="h-16 w-16 mb-4 text-primary" />
+                      <h2 className="text-2xl font-bold">You've reached the end!</h2>
+                      <p className="text-neutral-300 mb-4">You've swiped through all the tracks for this vibe.</p>
+                      <Button onClick={handleRestart}>
+                        <RotateCw className="mr-2" />
+                        Start New Search
+                      </Button>
+                    </>
+                  )}
                 </div>
               )}
             </div>

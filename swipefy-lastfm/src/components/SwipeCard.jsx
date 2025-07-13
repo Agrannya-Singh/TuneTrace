@@ -3,40 +3,41 @@ import TinderCard from 'react-tinder-card';
 
 const SwipeCard = ({ track, onSwipe }) => {
   const [previewUrl, setPreviewUrl] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageUrl, setImageUrl] = useState('https://via.placeholder.com/150');
 
-  // Select the largest available image or fallback
   useEffect(() => {
     if (track.image && Array.isArray(track.image) && track.image.length > 0) {
-        const largestImage = track.image.reduce((largest, current) => 
-        current['#text'] && current['#text'].length > (largest['#text'] || '').length ? current : largest, 
-        { '#text': 'https://via.placeholder.com/150' }
-        );
-        setImageUrl(largestImage['#text']);
-    } else {
-        setImageUrl('https://via.placeholder.com/150');
+        // Find the 'extralarge' image or default to the last one in the array
+        const extraLargeImage = track.image.find(img => img.size === 'extralarge');
+        const bestImage = extraLargeImage || track.image[track.image.length - 1];
+        if (bestImage && bestImage['#text']) {
+            setImageUrl(bestImage['#text']);
+        }
     }
   }, [track.image]);
 
   const handlePreview = async () => {
-    const query = `${track.name} ${track.artist.name} official audio site:youtube.com`;
+    const YOUTUBE_API_KEY = "your-youtube-api-key"; // IMPORTANT: Replace with your key
+    if (YOUTUBE_API_KEY === "your-youtube-api-key") {
+      alert("Please replace 'your-youtube-api-key' in src/components/SwipeCard.jsx with a valid YouTube Data API key.");
+      return;
+    }
+
+    const query = `${track.name} ${track.artist.name} official audio`;
     try {
-      // IMPORTANT: Replace 'your-youtube-api-key' with your actual YouTube Data API key.
       const response = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=your-youtube-api-key&maxResults=1&type=video`
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}&maxResults=1&type=video`
       );
       const data = await response.json();
       const videoId = data.items?.[0]?.id?.videoId;
       if (videoId) {
         setPreviewUrl(`https://www.youtube.com/embed/${videoId}`);
       } else {
-        setPreviewUrl(''); // Clear if no video found
         alert('No preview available for this track.');
       }
     } catch (error) {
       console.error('Error fetching preview:', error);
-      setPreviewUrl('');
-      alert('Error fetching preview. Check YouTube API key.');
+      alert('Error fetching preview. Check console and ensure your YouTube API key is valid.');
     }
   };
 
@@ -51,13 +52,13 @@ const SwipeCard = ({ track, onSwipe }) => {
           src={imageUrl}
           alt={`${track.name} poster`}
           className="w-full h-48 object-cover rounded-lg mb-4"
-          onError={(e) => { e.target.src = 'https://via.placeholder.com/150'; }} // Fallback on error
+          onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/150'; }}
         />
         <h2 className="text-xl font-semibold">{track.name}</h2>
         <p className="text-gray-600">{track.artist.name}</p>
         <button
           onClick={handlePreview}
-          className="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          className="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 w-full"
         >
           Preview Song
         </button>

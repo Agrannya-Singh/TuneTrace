@@ -4,7 +4,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import type { Song } from '@/lib/spotify';
 
 const { YOUTUBE_API_KEY } = process.env;
-const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3/search';
+const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3/videos';
 
 // In-memory cache for API responses to avoid hitting rate limits
 const cache = {
@@ -30,10 +30,10 @@ export async function GET(req: NextRequest) {
   try {
     const params = new URLSearchParams({
       part: 'snippet',
-      q: 'Top 50 Global playlist', // A query to get a list of popular music videos
-      type: 'video',
+      chart: 'mostPopular',
       videoCategoryId: '10', // 10 is the category ID for Music
       maxResults: '50',
+      regionCode: 'US', // Using a major region for a stable "global" chart
       key: YOUTUBE_API_KEY,
     });
 
@@ -54,16 +54,16 @@ export async function GET(req: NextRequest) {
 
     const songs: Song[] = data.items
       .map((item: any) => {
-        if (!item.id.videoId || !item.snippet.title || !item.snippet.channelTitle || !item.snippet.thumbnails?.high?.url) {
+        if (!item.id || !item.snippet.title || !item.snippet.channelTitle || !item.snippet.thumbnails?.high?.url) {
           return null;
         }
 
         return {
-          id: item.id.videoId,
+          id: item.id,
           title: item.snippet.title,
           artist: item.snippet.channelTitle,
           albumArtUrl: item.snippet.thumbnails.high.url,
-          previewUrl: `https://www.youtube.com/embed/${item.id.videoId}`,
+          previewUrl: `https://www.youtube.com/embed/${item.id}`,
         };
       })
       .filter((song: Song | null): song is Song => song !== null);

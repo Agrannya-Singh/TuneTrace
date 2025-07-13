@@ -4,14 +4,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import type { Song } from '@/lib/spotify';
 
 const { YOUTUBE_API_KEY } = process.env;
-const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3/videos';
-
-// In-memory cache for API responses to avoid hitting rate limits
-const cache = {
-  data: null,
-  timestamp: 0,
-  ttl: 1000 * 60 * 60, // 1 hour
-};
+const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3/search';
 
 export async function GET(req: NextRequest) {
   if (!YOUTUBE_API_KEY) {
@@ -22,22 +15,39 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const now = Date.now();
-  if (cache.data && (now - cache.timestamp < cache.ttl)) {
-    return NextResponse.json(cache.data);
-  }
+  const { searchParams } = new URL(req.url);
+  const mood = searchParams.get('mood') || '';
+  const genre = searchParams.get('genre') || 'popular music';
+  
+  // Default to most popular chart if no genre or mood is provided
+  const useChart = !mood && genre === 'popular music';
 
   try {
-    const params = new URLSearchParams({
-      part: 'snippet',
-      chart: 'mostPopular',
-      videoCategoryId: '10', // 10 is the category ID for Music
-      maxResults: '50',
-      regionCode: 'US', // Using a major region for a stable "global" chart
-      key: YOUTUBE_API_KEY,
-    });
-
-    const res = await fetch(`${YOUTUBE_API_BASE}?${params.toString()}`);
+    let finalUrl = '';
+    if (useChart) {
+      const params = new URLSearchParams({
+        part: 'snippet',
+        chart: 'mostPopular',
+        videoCategoryId: '10', // 10 is the category ID for Music
+        maxResults: '50',
+        regionCode: 'US',
+        key: YOUTUBE_API_KEY,
+      });
+      finalUrl = `https://www.googleapis.com/youtube/v3/videos?${params.toString()}`;
+    } else {
+      const query = `${mood} ${genre} music videos official`.trim();
+      const params = new URLSearchParams({
+        part: 'snippet',
+        q: query,
+        type: 'video',
+        videoCategoryId: '10',
+        maxResults: '50',
+        key: YOUTUBE_API_KEY,
+      });
+      finalUrl = `${YOUTUBE_API_BASE}?${params.toString()}`;
+    }
+    
+    const res = await fetch(finalUrl);
 
     if (!res.ok) {
       const errorBody = await res.json();
@@ -54,22 +64,20 @@ export async function GET(req: NextRequest) {
 
     const songs: Song[] = data.items
       .map((item: any) => {
-        if (!item.id || !item.snippet.title || !item.snippet.channelTitle || !item.snippet.thumbnails?.high?.url) {
+        const videoId = useChart ? item.id : item.id.videoId;
+        if (!videoId || !item.snippet?.title || !item.snippet?.channelTitle || !item.snippet?.thumbnails?.high?.url) {
           return null;
         }
 
         return {
-          id: item.id,
+          id: videoId,
           title: item.snippet.title,
           artist: item.snippet.channelTitle,
           albumArtUrl: item.snippet.thumbnails.high.url,
-          previewUrl: `https://www.youtube.com/embed/${item.id}`,
+          previewUrl: `https://www.youtube.com/embed/${videoId}`,
         };
       })
       .filter((song: Song | null): song is Song => song !== null);
-
-    cache.data = songs;
-    cache.timestamp = now;
 
     return NextResponse.json(songs);
 

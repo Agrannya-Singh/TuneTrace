@@ -6,7 +6,7 @@ import TinderCard from 'react-tinder-card';
 import type { Song } from '@/lib/spotify';
 import { SongCard } from './song-card';
 import { Button } from '@/components/ui/button';
-import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download, Info } from 'lucide-react';
+import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download, Info, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
@@ -23,26 +23,36 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert"
+import { Input } from './ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Label } from './ui/label';
 
 
-type AppState = 'loading' | 'ready' | 'outOfCards' | 'error';
+type AppState = 'moodSelection' | 'loading' | 'ready' | 'outOfCards' | 'error';
 
 export default function TuneSwipeClient() {
-  const [appState, setAppState] = useState<AppState>('loading');
+  const [appState, setAppState] = useState<AppState>('moodSelection');
   const [songs, setSongs] = useState<Song[]>([]);
   const [likedSongs, setLikedSongs] = useState<Song[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [childRefs, setChildRefs] = useState<React.RefObject<TinderCardAPI>[]>([]);
+  const [mood, setMood] = useState('');
+  const [genre, setGenre] = useState('');
   
   const { toast } = useToast();
 
   const currentIndexRef = useRef(currentIndex);
 
-  const fetchSongs = useCallback(async () => {
+  const fetchSongs = useCallback(async (currentMood: string, currentGenre: string) => {
     setAppState('loading');
     setLikedSongs([]); // Reset liked songs on new fetch
     try {
-      const res = await fetch('/api/songs');
+      const params = new URLSearchParams({
+        mood: currentMood,
+        genre: currentGenre,
+      });
+
+      const res = await fetch(`/api/songs?${params.toString()}`);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: 'An unknown error occurred' }));
         throw new Error(errorData.error || `Server responded with ${res.status}`);
@@ -70,11 +80,25 @@ export default function TuneSwipeClient() {
     }
   }, [toast]);
 
-  useEffect(() => {
-    fetchSongs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+  const handleFindSongs = () => {
+    if (genre) {
+      fetchSongs(mood, genre);
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Missing Genre",
+        description: "Please enter a genre to start discovering music.",
+      });
+    }
+  };
+  
+  const handleRestart = () => {
+    setAppState('moodSelection');
+    setSongs([]);
+    setLikedSongs([]);
+    setMood('');
+    setGenre('');
+  }
 
   const updateCurrentIndex = (val: number) => {
     setCurrentIndex(val);
@@ -111,7 +135,7 @@ export default function TuneSwipeClient() {
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
+a.href = url;
     a.download = 'tunetrace-liked-songs.txt';
     document.body.appendChild(a);
     a.click();
@@ -121,11 +145,40 @@ export default function TuneSwipeClient() {
   
   const renderContent = () => {
     switch (appState) {
+      case 'moodSelection':
+        return (
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-2xl">Find Your Vibe</CardTitle>
+              <CardDescription>
+                Tell us what you want to listen to, and we'll find the tracks.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={(e) => { e.preventDefault(); handleFindSongs(); }}>
+                <div className="grid w-full items-center gap-4">
+                  <div className="flex flex-col space-y-1.5">
+                    <Label htmlFor="genre">Genre</Label>
+                    <Input id="genre" placeholder="e.g., underground rap, alternative, etc." value={genre} onChange={(e) => setGenre(e.target.value)} />
+                  </div>
+                  <div className="flex flex-col space-y-1.5">
+                    <Label htmlFor="mood">Mood (Optional)</Label>
+                    <Input id="mood" placeholder="e.g., chill, upbeat, workout" value={mood} onChange={(e) => setMood(e.target.value)} />
+                  </div>
+                  <Button type="submit" className="w-full">
+                    <Search className="mr-2 h-4 w-4" />
+                    Find Music
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        );
       case 'loading':
          return (
           <div className="text-center flex flex-col items-center justify-center h-full text-white">
             <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
-            <p className="text-xl">Finding some bangers on YouTube...</p>
+            <p className="text-xl">Finding some bangers for you...</p>
           </div>
         );
       case 'ready':
@@ -155,10 +208,10 @@ export default function TuneSwipeClient() {
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900/80 rounded-xl text-white text-center p-8">
                   <Music className="h-16 w-16 mb-4 text-primary" />
                   <h2 className="text-2xl font-bold">You've reached the end!</h2>
-                  <p className="text-neutral-300 mb-4">You've swiped through all the tracks.</p>
-                  <Button onClick={fetchSongs}>
+                  <p className="text-neutral-300 mb-4">You've swiped through all the tracks for this vibe.</p>
+                  <Button onClick={handleRestart}>
                     <RotateCw className="mr-2" />
-                    Find More Songs
+                    Start New Search
                   </Button>
                 </div>
               )}
@@ -206,6 +259,9 @@ export default function TuneSwipeClient() {
                 <Heart className="h-10 w-10" />
               </Button>
             </div>
+            <Button variant="link" className="mt-4 text-muted-foreground" onClick={handleRestart}>
+              New Search
+            </Button>
           </div>
         );
       case 'error':
@@ -218,7 +274,7 @@ export default function TuneSwipeClient() {
                 We couldn't load songs from YouTube. This might be a temporary issue or a problem with the API configuration.
               </AlertDescription>
             </Alert>
-            <Button onClick={fetchSongs} className="mt-4">
+            <Button onClick={handleRestart} className="mt-4">
               <RotateCw className="mr-2" />
               Try Again
             </Button>

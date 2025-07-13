@@ -1,26 +1,5 @@
-const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'i.scdn.co',
-        port: '',
-        pathname: '/**',
-      },
-    ],
-  },
-};
-
-module.exports = nextConfig;
+{
+  "projects": {
+    "default": "your-firebase-project-id"
+  }
+}

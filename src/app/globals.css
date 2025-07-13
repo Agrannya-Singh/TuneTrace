@@ -45,6 +45,29 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(at 27% 37%, hsl(var(--primary) / 0.1) 0px, transparent 50%),
+      radial-gradient(at 97% 21%, hsl(var(--accent) / 0.1) 0px, transparent 50%),
+      radial-gradient(at 52% 99%, hsl(var(--primary) / 0.15) 0px, transparent 50%),
+      radial-gradient(at 10% 29%, hsl(var(--accent) / 0.1) 0px, transparent 50%),
+      radial-gradient(at 97% 96%, hsl(var(--background)) 0px, transparent 50%),
+      radial-gradient(at 33% 50%, hsl(var(--primary) / 0.1) 0px, transparent 50%),
+      radial-gradient(at 79% 53%, hsl(var(--background)) 0px, transparent 50%);
+    animation: gradient-animation 15s ease infinite;
+    background-size: 200% 200%;
+  }
+}
+
+@keyframes gradient-animation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
   }
 }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useRef, useEffect, useCallback, createRef } from 'react';
@@ -23,12 +24,15 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert"
-import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
+import { Checkbox } from './ui/checkbox';
 
 
 type AppState = 'moodSelection' | 'loading' | 'ready' | 'outOfCards' | 'error';
+
+const genres = ['Rap', 'Hip Hop', 'Pop', 'Rock', 'Indie', 'Electronic', 'R&B', 'Country', 'Alternative', 'Metal', 'Folk'];
+const moods = ['Chill', 'Upbeat', 'Workout', 'Party', 'Sad', 'Focus', 'Romantic', 'Energetic'];
 
 export default function TuneSwipeClient() {
   const [appState, setAppState] = useState<AppState>('moodSelection');
@@ -36,20 +40,23 @@ export default function TuneSwipeClient() {
   const [likedSongs, setLikedSongs] = useState<Song[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [childRefs, setChildRefs] = useState<React.RefObject<TinderCardAPI>[]>([]);
-  const [mood, setMood] = useState('');
-  const [genre, setGenre] = useState('');
   
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
+
   const { toast } = useToast();
 
   const currentIndexRef = useRef(currentIndex);
 
-  const fetchSongs = useCallback(async (currentMood: string, currentGenre: string) => {
+  const fetchSongs = useCallback(async (genres: string[], moods: string[]) => {
     setAppState('loading');
     setLikedSongs([]); // Reset liked songs on new fetch
     try {
+      const genreQuery = genres.join(' ');
+      const moodQuery = moods.join(' ');
       const params = new URLSearchParams({
-        mood: currentMood,
-        genre: currentGenre,
+        mood: moodQuery,
+        genre: genreQuery,
       });
 
       const res = await fetch(`/api/songs?${params.toString()}`);
@@ -81,13 +88,13 @@ export default function TuneSwipeClient() {
   }, [toast]);
 
   const handleFindSongs = () => {
-    if (genre) {
-      fetchSongs(mood, genre);
+    if (selectedGenres.length > 0) {
+      fetchSongs(selectedGenres, selectedMoods);
     } else {
       toast({
         variant: "destructive",
         title: "Missing Genre",
-        description: "Please enter a genre to start discovering music.",
+        description: "Please select at least one genre to start discovering music.",
       });
     }
   };
@@ -96,9 +103,20 @@ export default function TuneSwipeClient() {
     setAppState('moodSelection');
     setSongs([]);
     setLikedSongs([]);
-    setMood('');
-    setGenre('');
+    setSelectedGenres([]);
+    setSelectedMoods([]);
   }
+
+  const handleCheckboxChange = (
+    type: 'genre' | 'mood',
+    value: string,
+    checked: boolean
+  ) => {
+    const updater = type === 'genre' ? setSelectedGenres : setSelectedMoods;
+    updater((prev: string[]) =>
+      checked ? [...prev, value] : prev.filter((item) => item !== value)
+    );
+  };
 
   const updateCurrentIndex = (val: number) => {
     setCurrentIndex(val);
@@ -147,29 +165,59 @@ a.href = url;
     switch (appState) {
       case 'moodSelection':
         return (
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-lg">
             <CardHeader>
               <CardTitle className="text-2xl">Find Your Vibe</CardTitle>
               <CardDescription>
-                Tell us what you want to listen to, and we'll find the tracks.
+                Select your desired genres and moods to get song recommendations.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={(e) => { e.preventDefault(); handleFindSongs(); }}>
-                <div className="grid w-full items-center gap-4">
-                  <div className="flex flex-col space-y-1.5">
-                    <Label htmlFor="genre">Genre</Label>
-                    <Input id="genre" placeholder="e.g., underground rap, alternative, etc." value={genre} onChange={(e) => setGenre(e.target.value)} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label className="text-lg font-semibold mb-2 block">Genres (Required)</Label>
+                    <ScrollArea className="h-48 p-4 border rounded-md">
+                      <div className="space-y-2">
+                        {genres.map(genre => (
+                          <div key={genre} className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={`genre-${genre}`}
+                              onCheckedChange={(checked) => handleCheckboxChange('genre', genre, !!checked)}
+                              checked={selectedGenres.includes(genre)}
+                            />
+                            <label htmlFor={`genre-${genre}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                              {genre}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   </div>
-                  <div className="flex flex-col space-y-1.5">
-                    <Label htmlFor="mood">Mood (Optional)</Label>
-                    <Input id="mood" placeholder="e.g., chill, upbeat, workout" value={mood} onChange={(e) => setMood(e.target.value)} />
+                  <div>
+                    <Label className="text-lg font-semibold mb-2 block">Moods (Optional)</Label>
+                     <ScrollArea className="h-48 p-4 border rounded-md">
+                      <div className="space-y-2">
+                        {moods.map(mood => (
+                          <div key={mood} className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={`mood-${mood}`}
+                              onCheckedChange={(checked) => handleCheckboxChange('mood', mood, !!checked)}
+                              checked={selectedMoods.includes(mood)}
+                            />
+                            <label htmlFor={`mood-${mood}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                              {mood}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   </div>
-                  <Button type="submit" className="w-full">
-                    <Search className="mr-2 h-4 w-4" />
-                    Find Music
-                  </Button>
                 </div>
+                <Button type="submit" className="w-full mt-6">
+                  <Search className="mr-2 h-4 w-4" />
+                  Find Music
+                </Button>
               </form>
             </CardContent>
           </Card>

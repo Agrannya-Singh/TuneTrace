@@ -6,7 +6,10 @@ import SwipeCard from './components/SwipeCard';
 import Login from './components/Login';
 import DownloadButton from './components/DownloadButton';
 
-const YOUTUBE_API_KEY = "AIzaSyCVSyC30V9I9OOlUZEGH_ot_Zzq3_a27FQ"; 
+const apiKey = process.env.YOUTUBE_API_KEY;
+
+
+const YOUTUBE_API_KEY =apiKey ; 
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3/videos';
 
 function App() {

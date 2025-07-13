@@ -1,3 +1,4 @@
+
 'use server';
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
       });
       finalUrl = `https://www.googleapis.com/youtube/v3/videos?${params.toString()}`;
     } else {
-      const query = `${mood} ${genre} music videos official`.trim();
+      const query = `${mood} ${genre} official music videos`.trim();
       const params = new URLSearchParams({
         part: 'snippet',
         q: query,

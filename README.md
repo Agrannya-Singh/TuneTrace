@@ -8,8 +8,7 @@ Tired of the same old playlists on repeat? Wish you could discover new music tha
 
 TuneSwipe is a fresh, interactive way to find your next favorite song. We've thrown out the boring algorithms and put you in control. Using a fun, Tinder-style swiping interface, you become the DJ of your own discovery journey.
 
-![TuneSwipe Demo](https://placehold.co/600x400.png)
-*Data-ai-hint: app interface music*
+
 
 ## Features That Rock
 

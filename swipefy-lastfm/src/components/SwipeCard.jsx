@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import TinderCard from 'react-tinder-card';
 
 const SwipeCard = ({ track, onSwipe }) => {
   const [previewUrl, setPreviewUrl] = useState('');
-  const [imageUrl, setImageUrl] = useState('https://via.placeholder.com/150');
+  const [imageUrl, setImageUrl] = useState('https://placehold.co/300x300.png');
 
   useEffect(() => {
     if (track.image && Array.isArray(track.image) && track.image.length > 0) {
@@ -52,7 +53,7 @@ const SwipeCard = ({ track, onSwipe }) => {
           src={imageUrl}
           alt={`${track.name} poster`}
           className="w-full h-48 object-cover rounded-lg mb-4"
-          onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/150'; }}
+          onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300.png'; }}
         />
         <h2 className="text-xl font-semibold">{track.name}</h2>
         <p className="text-gray-600">{track.artist.name}</p>

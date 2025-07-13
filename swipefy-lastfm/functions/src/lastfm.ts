@@ -9,6 +9,15 @@ const corsHandler = cors({ origin: true });
 // firebase functions:config:set lastfm.api_key="YOUR_API_KEY"
 const LASTFM_API_KEY = functions.config().lastfm?.api_key || 'c55cf346b9e31fc1264620b866e0739b'; // Fallback for local testing
 
+const mapTrackData = (track: any) => ({
+  name: track.name,
+  artist: { name: track.artist.name },
+  mbid: track.mbid,
+  image: track.image && track.image.length > 0 && track.image.some((img: any) => img['#text'])
+    ? track.image
+    : [{ size: 'large', '#text': 'https://placehold.co/300x300.png' }],
+});
+
 export const getTopTracks = functions.https.onRequest((req, res) => {
   corsHandler(req, res, async () => {
     try {
@@ -23,12 +32,7 @@ export const getTopTracks = functions.https.onRequest((req, res) => {
           },
         }
       );
-      const tracks = response.data.tracks.track.map((track: any) => ({
-        name: track.name,
-        artist: { name: track.artist.name },
-        mbid: track.mbid,
-        image: track.image,
-      }));
+      const tracks = response.data.tracks.track.map(mapTrackData);
       res.json({ tracks });
     } catch (error) {
       console.error('Error in getTopTracks:', error);
@@ -58,12 +62,7 @@ export const getSimilarTracks = functions.https.onRequest(async (req, res) => {
           },
         }
       );
-      const tracks = response.data.similartracks.track.map((track: any) => ({
-        name: track.name,
-        artist: { name: track.artist.name },
-        mbid: track.mbid,
-        image: track.image,
-      }));
+      const tracks = response.data.similartracks.track.map(mapTrackData);
       res.json({ tracks });
     } catch (error) {
       console.error('Error in getSimilarTracks:', error);

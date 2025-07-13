@@ -18,7 +18,7 @@ function App() {
 
   useEffect(() => {
     if (user) {
-      // Replace with your actual project ID
+      // IMPORTANT: Replace with your actual project ID
       fetch('https://us-central1-your-project-id.cloudfunctions.net/getTopTracks')
         .then(res => res.json())
         .then(data => {
@@ -37,24 +37,8 @@ function App() {
     }
     setCurrentIndex(prev => prev + 1);
 
-    if (currentIndex + 5 >= tracks.length) {
-      fetchRecommendations();
-    }
-  };
-
-  const fetchRecommendations = async () => {
-    if (likedSongs.length === 0) return;
-    const lastLikedSong = likedSongs[likedSongs.length - 1];
-    if (!lastLikedSong || !lastLikedSong.artist || !lastLikedSong.name) return;
-    
-    const response = await fetch(
-      // Replace with your actual project ID
-      `https://us-central1-your-project-id.cloudfunctions.net/getSimilarTracks?artist=${encodeURIComponent(lastLikedSong.artist.name)}&track=${encodeURIComponent(lastLikedSong.name)}`
-    );
-    const data = await response.json();
-    if(data.tracks) {
-        setTracks(prev => [...prev, ...data.tracks]);
-    }
+    // Recommendation logic would need to be adapted for Genius API
+    // For now, we'll just go through the initial list.
   };
 
   return (
@@ -63,12 +47,12 @@ function App() {
         <Login />
       ) : (
         <>
-          <h1 className="text-4xl font-bold mb-8">Swipefy (Last.fm)</h1>
+          <h1 className="text-4xl font-bold mb-8">Swipefy (Genius)</h1>
           <div className="relative w-full max-w-md h-96 flex items-center justify-center">
             {tracks.length > currentIndex ? (
               tracks.slice(currentIndex, currentIndex + 1).map(track => (
                 <SwipeCard
-                  key={track.mbid || track.name}
+                  key={track.id}
                   track={track}
                   onSwipe={handleSwipe}
                 />

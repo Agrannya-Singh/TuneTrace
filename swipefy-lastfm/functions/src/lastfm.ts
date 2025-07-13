@@ -1,72 +1,73 @@
-
-import * as functions from 'firebase-functions';
-import axios from 'axios';
-import * as cors from 'cors';
+import * as functions from "firebase-functions";
+import axios from "axios";
+import * as cors from "cors";
 
 const corsHandler = cors({ origin: true });
 
-// It's recommended to set your API key in Firebase environment configuration
-// firebase functions:config:set lastfm.api_key="YOUR_API_KEY"
-const LASTFM_API_KEY = functions.config().lastfm?.api_key || 'c55cf346b9e31fc1264620b866e0739b'; // Fallback for local testing
+// Genius API access token
+const GENIUS_ACCESS_TOKEN = "jef8tkQqUVDP_lSiA5UXbDGfE3yAeBlEsz16EkXhd4GXKYHzb7Zo_I-Q2QEFuZGd";
+const GENIUS_API_BASE = "https://api.genius.com";
 
-const mapTrackData = (track: any) => ({
-  name: track.name,
-  artist: { name: track.artist.name },
-  mbid: track.mbid,
-  image: track.image && track.image.length > 0 && track.image.some((img: any) => img['#text'])
-    ? track.image
-    : [{ size: 'large', '#text': 'https://placehold.co/300x300.png' }],
+const mapTrackData = (hit: any) => ({
+  id: hit.result.id,
+  name: hit.result.title,
+  artist: { name: hit.result.primary_artist.name },
+  image: hit.result.song_art_image_url || 'https://placehold.co/300x300.png',
 });
 
+// This function will now get top tracks from Genius by searching for a popular term
 export const getTopTracks = functions.https.onRequest((req, res) => {
   corsHandler(req, res, async () => {
     try {
       const response = await axios.get(
-        'https://ws.audioscrobbler.com/2.0/',
+        `${GENIUS_API_BASE}/search`,
         {
+          headers: {
+            Authorization: `Bearer ${GENIUS_ACCESS_TOKEN}`,
+          },
           params: {
-            method: 'chart.gettoptracks',
-            api_key: LASTFM_API_KEY,
-            format: 'json',
-            limit: 50,
+            q: 'top 100', // A generic query to get popular songs
           },
         }
       );
-      const tracks = response.data.tracks.track.map(mapTrackData);
+      
+      const tracks = response.data.response.hits
+        .filter((hit: any) => hit.type === 'song' && hit.result.song_art_image_url)
+        .map(mapTrackData);
+
       res.json({ tracks });
-    } catch (error) {
-      console.error('Error in getTopTracks:', error);
-      res.status(500).json({ error: 'Failed to fetch top tracks' });
+    } catch (error: any) {
+      console.error("Error fetching Genius top tracks:", error.response ? error.response.data : error.message);
+      res.status(500).json({ error: "Failed to fetch top tracks from Genius" });
     }
   });
 });
 
-export const getSimilarTracks = functions.https.onRequest(async (req, res) => {
+
+// This function can be used to get more details, including song previews if available elsewhere
+export const getSongDetails = functions.https.onRequest(async (req, res) => {
   corsHandler(req, res, async () => {
     try {
-      const { artist, track } = req.query;
-      if (!artist || !track) {
-        return res.status(400).json({ error: 'Artist and track parameters are required' });
+      const { songId } = req.query;
+      if (!songId) {
+        return res.status(400).json({ error: "Song ID is required" });
       }
 
       const response = await axios.get(
-        'https://ws.audioscrobbler.com/2.0/',
+        `${GENIUS_API_BASE}/songs/${songId}`,
         {
-          params: {
-            method: 'track.getsimilar',
-            artist,
-            track,
-            api_key: LASTFM_API_KEY,
-            format: 'json',
-            limit: 10,
+          headers: {
+            Authorization: `Bearer ${GENIUS_ACCESS_TOKEN}`,
           },
         }
       );
-      const tracks = response.data.similartracks.track.map(mapTrackData);
-      res.json({ tracks });
-    } catch (error) {
-      console.error('Error in getSimilarTracks:', error);
-      res.status(500).json({ error: 'Failed to fetch similar tracks' });
+      
+      const song = response.data.response.song;
+      res.json({ song });
+
+    } catch (error: any) {
+      console.error("Error fetching Genius song details:", error.response ? error.response.data : error.message);
+      res.status(500).json({ error: "Failed to fetch song details from Genius" });
     }
   });
 });

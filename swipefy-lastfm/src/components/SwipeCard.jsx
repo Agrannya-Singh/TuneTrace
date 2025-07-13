@@ -1,26 +1,15 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import TinderCard from 'react-tinder-card';
 
 const SwipeCard = ({ track, onSwipe }) => {
   const [previewUrl, setPreviewUrl] = useState('');
-  const [imageUrl, setImageUrl] = useState('https://placehold.co/300x300.png');
 
-  useEffect(() => {
-    if (track.image && Array.isArray(track.image) && track.image.length > 0) {
-        // Find the 'extralarge' image or default to the last one in the array
-        const extraLargeImage = track.image.find(img => img.size === 'extralarge');
-        const bestImage = extraLargeImage || track.image[track.image.length - 1];
-        if (bestImage && bestImage['#text']) {
-            setImageUrl(bestImage['#text']);
-        }
-    }
-  }, [track.image]);
-
+  // Genius API does not provide audio previews. This is a placeholder.
   const handlePreview = async () => {
-    const YOUTUBE_API_KEY = "your-youtube-api-key"; // IMPORTANT: Replace with your key
+    const YOUTUBE_API_KEY = "your-youtube-api-key";
     if (YOUTUBE_API_KEY === "your-youtube-api-key") {
-      alert("Please replace 'your-youtube-api-key' in src/components/SwipeCard.jsx with a valid YouTube Data API key.");
+      alert("YouTube API key needed for previews. Please add it to SwipeCard.jsx.");
       return;
     }
 
@@ -50,7 +39,7 @@ const SwipeCard = ({ track, onSwipe }) => {
     <TinderCard onSwipe={handleSwipe} preventSwipe={['up', 'down']} className="absolute">
       <div className="bg-white rounded-lg shadow-lg p-6 w-80 mx-auto">
         <img
-          src={imageUrl}
+          src={track.image}
           alt={`${track.name} poster`}
           className="w-full h-48 object-cover rounded-lg mb-4"
           onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300.png'; }}
@@ -59,7 +48,7 @@ const SwipeCard = ({ track, onSwipe }) => {
         <p className="text-gray-600">{track.artist.name}</p>
         <button
           onClick={handlePreview}
-          className="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 w-full"
+          className="mt-4 bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 w-full"
         >
           Preview Song
         </button>

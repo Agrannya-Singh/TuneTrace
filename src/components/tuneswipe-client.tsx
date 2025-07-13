@@ -6,7 +6,7 @@ import TinderCard from 'react-tinder-card';
 import type { Song } from '@/lib/spotify';
 import { SongCard } from './song-card';
 import { Button } from '@/components/ui/button';
-import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download } from 'lucide-react';
+import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download, Info } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
@@ -18,6 +18,12 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
+
 
 type AppState = 'loading' | 'ready' | 'outOfCards' | 'error';
 
@@ -27,9 +33,7 @@ export default function TuneSwipeClient() {
   const [likedSongs, setLikedSongs] = useState<Song[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [childRefs, setChildRefs] = useState<React.RefObject<TinderCardAPI>[]>([]);
-  const [isMuted, setIsMuted] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
+  
   const { toast } = useToast();
 
   const currentIndexRef = useRef(currentIndex);
@@ -46,9 +50,10 @@ export default function TuneSwipeClient() {
       const topSongs: Song[] = await res.json();
       
       if (topSongs.length > 0) {
-        setSongs(topSongs);
-        setChildRefs(Array(topSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
-        setCurrentIndex(topSongs.length - 1);
+        const shuffledSongs = topSongs.sort(() => Math.random() - 0.5);
+        setSongs(shuffledSongs);
+        setChildRefs(Array(shuffledSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
+        setCurrentIndex(shuffledSongs.length - 1);
         setAppState('ready');
       } else {
         setAppState('outOfCards');
@@ -70,25 +75,6 @@ export default function TuneSwipeClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (appState === 'ready' && songs.length > 0 && currentIndex < songs.length) {
-      const currentSong = songs[currentIndex];
-      if (currentSong?.previewUrl) {
-        if (audioRef.current) {
-          audioRef.current.pause();
-        }
-        const audio = new Audio(currentSong.previewUrl);
-        audio.volume = 0.5;
-        audio.loop = true;
-        audioRef.current = audio;
-        if (!isMuted) {
-          audio.play().catch(console.error);
-        }
-      }
-    } else if (audioRef.current) {
-      audioRef.current.pause();
-    }
-  }, [currentIndex, songs, appState, isMuted]);
 
   const updateCurrentIndex = (val: number) => {
     setCurrentIndex(val);
@@ -107,9 +93,6 @@ export default function TuneSwipeClient() {
   const outOfFrame = (songId: string, idx: number) => {
     const isLastCard = idx === 0;
     if (isLastCard) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
       setAppState('outOfCards');
     }
   };
@@ -124,7 +107,7 @@ export default function TuneSwipeClient() {
   };
 
   const downloadLikedSongs = () => {
-    const content = likedSongs.map(song => `${song.title} - ${song.artist}`).join('\n');
+    const content = likedSongs.map(song => `${song.title} - ${song.artist} (https://youtube.com/watch?v=${song.id})`).join('\n');
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -135,19 +118,6 @@ export default function TuneSwipeClient() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
-
-  const toggleMute = () => {
-    setIsMuted(prev => {
-        const newMutedState = !prev;
-        if (audioRef.current) {
-            audioRef.current.muted = newMutedState;
-            if (!newMutedState && audioRef.current.paused) {
-                audioRef.current.play().catch(console.error);
-            }
-        }
-        return newMutedState;
-    });
-  };
   
   const renderContent = () => {
     switch (appState) {
@@ -155,7 +125,7 @@ export default function TuneSwipeClient() {
          return (
           <div className="text-center flex flex-col items-center justify-center h-full text-white">
             <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
-            <p className="text-xl">Loading Global Top 50 from Spotify...</p>
+            <p className="text-xl">Finding some bangers on YouTube...</p>
           </div>
         );
       case 'ready':
@@ -175,8 +145,6 @@ export default function TuneSwipeClient() {
                   >
                     <SongCard 
                       song={song}
-                      isMuted={isMuted}
-                      onMuteToggle={toggleMute}
                       isActive={index === currentIndex}
                     />
                   </TinderCard>
@@ -187,10 +155,10 @@ export default function TuneSwipeClient() {
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900/80 rounded-xl text-white text-center p-8">
                   <Music className="h-16 w-16 mb-4 text-primary" />
                   <h2 className="text-2xl font-bold">You've reached the end!</h2>
-                  <p className="text-neutral-300 mb-4">You've swiped through the top tracks.</p>
+                  <p className="text-neutral-300 mb-4">You've swiped through all the tracks.</p>
                   <Button onClick={fetchSongs}>
                     <RotateCw className="mr-2" />
-                    Reload Playlist
+                    Find More Songs
                   </Button>
                 </div>
               )}
@@ -242,10 +210,15 @@ export default function TuneSwipeClient() {
         );
       case 'error':
         return (
-          <div className="text-center flex flex-col items-center justify-center h-full text-white">
-            <h2 className="text-2xl font-bold text-destructive">Oops, something went wrong.</h2>
-            <p className="text-neutral-400 mb-4">We couldn't load songs from Spotify.</p>
-            <Button onClick={fetchSongs}>
+          <div className="text-center flex flex-col items-center justify-center h-full text-white p-4">
+             <Alert variant="destructive" className="max-w-md">
+              <Info className="h-4 w-4" />
+              <AlertTitle>Oops, something went wrong.</AlertTitle>
+              <AlertDescription>
+                We couldn't load songs from YouTube. This might be a temporary issue or a problem with the API configuration.
+              </AlertDescription>
+            </Alert>
+            <Button onClick={fetchSongs} className="mt-4">
               <RotateCw className="mr-2" />
               Try Again
             </Button>

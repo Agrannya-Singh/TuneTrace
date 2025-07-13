@@ -1,7 +1,7 @@
 export interface Song {
-  id: string;
+  id: string; // YouTube Video ID
   title: string;
-  artist: string;
-  albumArtUrl: string;
-  previewUrl: string | null;
+  artist: string; // YouTube Channel Title
+  albumArtUrl: string; // YouTube Thumbnail URL
+  previewUrl: string | null; // YouTube Embed URL
 }

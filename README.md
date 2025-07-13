@@ -52,7 +52,7 @@ Ready to run your own TuneSwipe locally? It's easy!
 3.  **Set up your environment:**
     Create a `.env` file in the root of the project and add your YouTube API Key:
     ```
-    YOUTUBE_API_KEY=your_super_secret_api_key_here
+    YOUTUBE_API_KEY=your_api_key_here
     ```
 
 4.  **Run the development server:**

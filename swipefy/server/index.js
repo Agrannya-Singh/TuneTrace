@@ -14,7 +14,7 @@ const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
 const REDIRECT_URI = 'http://localhost:3000';
 
 app.get('/api/spotify/login', (req, res) => {
-  const scope = 'user-read-private playlist-read-private';
+  const scope = 'user-read-private playlist-read-private playlist-read-public';
   res.redirect(
     'https://accounts.spotify.com/authorize?' +
       querystring.stringify({
@@ -32,11 +32,13 @@ app.get('/api/spotify/playlist', async (req, res) => {
       'https://api.spotify.com/v1/playlists/37i9dQZEVXbMDoHDwVN2tF',
       {
         headers: { Authorization: req.headers.authorization },
+        params: { market: 'US' }, // Specify market to avoid regional issues
       }
     );
     res.json(response.data);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch playlist' });
+    console.error('API Error:', err.response ? err.response.status : err.message);
+    res.status(500).json({ error: 'Failed to fetch playlist', details: err.message });
   }
 });
 
@@ -54,7 +56,8 @@ app.get('/api/spotify/recommendations', async (req, res) => {
     );
     res.json(response.data);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch recommendations' });
+    console.error('API Error:', err.response ? err.response.status : err.message);
+    res.status(500).json({ error: 'Failed to fetch recommendations', details: err.message });
   }
 });
 

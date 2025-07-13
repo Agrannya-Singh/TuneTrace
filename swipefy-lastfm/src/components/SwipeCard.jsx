@@ -2,13 +2,14 @@
 import React, { useState } from 'react';
 import TinderCard from 'react-tinder-card';
 
+const apiKey = process.env.YOUTUBE_API;// fetches API key from github secrets
 const SwipeCard = ({ track, onSwipe }) => {
   const [previewUrl, setPreviewUrl] = useState('');
 
   // Genius API does not provide audio previews directly.
   // This function uses the YouTube API to find a preview.
   const handlePreview = async () => {
-    const YOUTUBE_API_KEY = " "; //provide API key here
+    const YOUTUBE_API_KEY = apiKey; //provide API key here
     
 
     const query = `${track.name} ${track.artist.name} official audio`;

@@ -94,7 +94,10 @@ export async function GET(req: NextRequest) {
         previewUrl: `https://www.youtube.com/embed/${item.id}`,
       }));
 
-    return NextResponse.json(songs);
+    // Shuffle the array to ensure freshness on each request
+    const shuffledSongs = songs.sort(() => Math.random() - 0.5);
+
+    return NextResponse.json(shuffledSongs);
 
   } catch (error) {
     console.error('[API/Songs] Error fetching tracks from YouTube:', error);

@@ -29,63 +29,37 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const mood = searchParams.get('mood') || '';
-  const genre = searchParams.get('genre') || 'popular music';
+  const genre = searchParams.get('genre') || '';
   
-  const useChart = !mood && !genre;
+  const query = `${mood} ${genre} music`.trim();
 
   try {
-    let initialItems: any[] = [];
-
-    if (useChart) {
-      // Use "popular music" as a default if no genre/mood is provided
-      const params = new URLSearchParams({
-        part: 'snippet,contentDetails', // Fetch contentDetails for duration
-        chart: 'mostPopular',
-        videoCategoryId: '10', // Music
-        maxResults: '50',
-        regionCode: 'US',
-        key: YOUTUBE_API_KEY,
-      });
-      const res = await fetch(`${YOUTUBE_API_BASE}/videos?${params.toString()}`);
-      if (!res.ok) throw new Error(`YouTube API responded with ${res.status}`);
-      const data = await res.json();
-      initialItems = data.items || [];
-
-    } else {
-      const query = `${mood} ${genre} official music video`.trim();
-      const params = new URLSearchParams({
-        part: 'snippet', // Search API can't fetch contentDetails directly
-        q: query,
-        type: 'video',
-        videoCategoryId: '10',
-        maxResults: '50',
-        key: YOUTUBE_API_KEY,
-      });
-      const searchRes = await fetch(`${YOUTUBE_API_BASE}/search?${params.toString()}`);
-      if (!searchRes.ok) throw new Error(`YouTube API responded with ${searchRes.status}`);
-      const searchData = await searchRes.json();
-      
-      const searchItems = searchData.items || [];
-      const ids = searchItems.map((item: any) => item.id.videoId).join(',');
-
-      if (!ids) {
-        return NextResponse.json([]);
-      }
-
-      // Fetch video details for the search results to get duration
-      const videoParams = new URLSearchParams({
-        part: 'snippet,contentDetails',
-        id: ids,
-        key: YOUTUBE_API_KEY,
-      });
-      const videoRes = await fetch(`${YOUTUBE_API_BASE}/videos?${videoParams.toString()}`);
-      if (!videoRes.ok) throw new Error(`YouTube API responded with ${videoRes.status}`);
-      const videoData = await videoRes.json();
-      initialItems = videoData.items || [];
+    const params = new URLSearchParams({
+      part: 'snippet,contentDetails',
+      chart: 'mostPopular',
+      videoCategoryId: '10', // Music
+      maxResults: '50',
+      regionCode: 'US',
+      key: YOUTUBE_API_KEY,
+    });
+    
+    // If the user provided a mood or genre, use it as a query.
+    // The 'chart' parameter will then use this as a hint for popular videos matching the query.
+    if (query !== 'music') {
+        params.set('q', query);
     }
 
+    const res = await fetch(`${YOUTUBE_API_BASE}/videos?${params.toString()}`);
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ message: `YouTube API responded with ${res.status}` }));
+      throw new Error(errorData.message || `YouTube API responded with ${res.status}`);
+    }
+    
+    const data = await res.json();
+    const initialItems = data.items || [];
+
     if (!initialItems || initialItems.length === 0) {
-      console.error('No items found from YouTube API');
+      console.error('No items found from YouTube API for query:', query);
       return NextResponse.json([]);
     }
 
@@ -112,17 +86,13 @@ export async function GET(req: NextRequest) {
 
         return true;
       })
-      .map((item: any) => {
-        // ID can be directly from `item.id` (for /videos endpoint) or `item.id.videoId` (from /search)
-        const videoId = typeof item.id === 'string' ? item.id : item.id.videoId;
-        return {
-          id: videoId,
-          title: item.snippet.title,
-          artist: item.snippet.channelTitle,
-          albumArtUrl: item.snippet.thumbnails.high.url,
-          previewUrl: `https://www.youtube.com/embed/${videoId}`,
-        };
-      });
+      .map((item: any) => ({
+        id: item.id,
+        title: item.snippet.title,
+        artist: item.snippet.channelTitle,
+        albumArtUrl: item.snippet.thumbnails.high.url,
+        previewUrl: `https://www.youtube.com/embed/${item.id}`,
+      }));
 
     return NextResponse.json(songs);
 

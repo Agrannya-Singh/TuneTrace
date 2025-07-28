@@ -34,7 +34,6 @@ type AppState = 'moodSelection' | 'loading' | 'ready' | 'outOfCards' | 'error';
 const genres = ['Rap', 'Hip Hop', 'Pop', 'Rock', 'Indie', 'Electronic', 'R&B', 'Country', 'Alternative', 'Metal', 'Folk'];
 const moods = ['Chill', 'Upbeat', 'Workout', 'Party', 'Sad', 'Focus', 'Romantic', 'Energetic'];
 
-// NOTE: Replace this with your actual Render service name
 const SUGGESTION_SERVICE_BASE_URL = 'https://song-suggest-microservice.onrender.com';
 
 export default function TuneSwipeClient() {

@@ -1,4 +1,3 @@
-//UI componenets 
 'use client';
 
 import { useState, useMemo, useRef, useEffect, useCallback, createRef } from 'react';
@@ -35,6 +34,18 @@ const genres = ['Rap', 'Hip Hop', 'Pop', 'Rock', 'Indie', 'Electronic', 'R&B', '
 const moods = ['Chill', 'Upbeat', 'Workout', 'Party', 'Sad', 'Focus', 'Romantic', 'Energetic'];
 
 const SUGGESTION_SERVICE_BASE_URL = 'https://song-suggest-microservice.onrender.com';
+
+async function logRecommendationError(error: any, songName: string) {
+  try {
+    await fetch('/api/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error, songName }),
+    });
+  } catch (e) {
+    console.error("Failed to write to log endpoint:", e);
+  }
+}
 
 export default function TuneSwipeClient() {
   const [appState, setAppState] = useState<AppState>('moodSelection');
@@ -147,6 +158,7 @@ export default function TuneSwipeClient() {
         title: "Recommendation Error",
         description: errorMessage,
       })
+      await logRecommendationError(errorMessage, songName);
     } finally {
         setIsFetchingRecommendations(false);
     }
@@ -192,7 +204,6 @@ export default function TuneSwipeClient() {
   };
 
   const outOfFrame = (songId: string, idx: number) => {
-    // When the last card is swiped away, check if we need to show the 'out of cards' state
     if (currentIndexRef.current < 0) {
       setAppState('outOfCards');
     }

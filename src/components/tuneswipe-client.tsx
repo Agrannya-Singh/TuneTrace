@@ -9,7 +9,6 @@ import { SongCard } from './song-card';
 import { Button } from '@/components/ui/button';
 import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download, Info, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
-import { recommendSongs } from '@/ai/flows/song-recommender';
 import {
   Dialog,
   DialogContent,
@@ -50,8 +49,8 @@ export default function TuneSwipeClient() {
 
   const currentIndexRef = useRef(currentIndex);
 
-  const fetchSongs = useCallback(async (genres: string[], moods: string[], songQueries: string[] = []) => {
-    if (songQueries.length > 0) {
+  const fetchSongs = useCallback(async (genres: string[], moods: string[], videoIds?: string) => {
+    if (videoIds) {
       // Don't change app state when fetching recommendations in the background
       setIsFetchingRecommendations(true);
     } else {
@@ -60,42 +59,37 @@ export default function TuneSwipeClient() {
     }
 
     try {
-      let fetchedSongs: Song[];
-      if(songQueries.length > 0) {
-        // Fetch specific songs recommended by AI
-        const promises = songQueries.map(query => {
-            const params = new URLSearchParams({ mood: '', genre: query });
-            return fetch(`/api/songs?${params.toString()}`).then(res => res.json());
-        });
-        const results = await Promise.all(promises);
-        fetchedSongs = results.flat().filter(song => song); // Flatten and remove any nulls
-      } else {
-        // Fetch based on user's mood/genre selection
-        const genreQuery = genres.join(' ');
-        const moodQuery = moods.join(' ');
-        const params = new URLSearchParams({
-          mood: moodQuery,
-          genre: genreQuery,
-        });
+        const params = new URLSearchParams();
+        if (videoIds) {
+            params.set('videoIds', videoIds);
+        } else {
+            const genreQuery = genres.join(' ');
+            const moodQuery = moods.join(' ');
+            params.set('mood', moodQuery);
+            params.set('genre', genreQuery);
+        }
+
         const res = await fetch(`/api/songs?${params.toString()}`);
+
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({ error: 'An unknown error occurred' }));
           throw new Error(errorData.error || `Server responded with ${res.status}`);
         }
-        fetchedSongs = await res.json();
-      }
+        
+        const fetchedSongs = await res.json();
       
       if (fetchedSongs.length > 0) {
         const shuffledSongs = fetchedSongs.sort(() => Math.random() - 0.5);
         
-        if(songQueries.length > 0) {
+        if(videoIds) {
           // Add recommended songs to the front of the swipe queue
           setSongs(prevSongs => {
             const existingIds = new Set(prevSongs.map(s => s.id));
             const newSongs = shuffledSongs.filter(s => !existingIds.has(s.id));
-            const updatedSongs = [...newSongs, ...prevSongs.slice(currentIndexRef.current)];
+            // New songs are at the end, current index should point to the first new song
+            const updatedSongs = [...prevSongs.slice(0, currentIndex + 1), ...newSongs];
             setChildRefs(Array(updatedSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
-            setCurrentIndex(updatedSongs.length - 1);
+            // No need to change current index, as new cards are added after current
             return updatedSongs;
           });
         } else {
@@ -105,12 +99,12 @@ export default function TuneSwipeClient() {
           setCurrentIndex(shuffledSongs.length - 1);
           setAppState('ready');
         }
-      } else if (songQueries.length === 0) {
+      } else if (!videoIds) {
         setAppState('outOfCards');
       }
     } catch (error) {
       console.error('Error fetching songs:', error);
-      if (songQueries.length === 0) {
+      if (!videoIds) {
         setAppState('error');
         const errorMessage = error instanceof Error ? error.message : "Could not fetch songs. Please try again later.";
         toast({
@@ -120,23 +114,46 @@ export default function TuneSwipeClient() {
         })
       }
     } finally {
-      if (songQueries.length > 0) {
+      if (videoIds) {
         setIsFetchingRecommendations(false);
       }
     }
-  }, [toast]);
+  }, [toast, currentIndex]);
 
 
   const getRecommendations = useCallback(async () => {
-    if (isFetchingRecommendations) return;
-
+    if (isFetchingRecommendations || likedSongs.length === 0) return;
+    
+    setIsFetchingRecommendations(true);
     const likedSongInfo = likedSongs.map(s => `${s.title} by ${s.artist}`);
+
     try {
-      const result = await recommendSongs({ likedSongs: likedSongInfo });
-      if (result.recommendations && result.recommendations.length > 0) {
-        const queries = result.recommendations.map(r => `${r.title} ${r.artist}`);
-        await fetchSongs([], [], queries);
-      }
+        const res = await fetch('https://song-suggest-microservice.onrender.com/suggest-songs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                liked_songs: likedSongInfo,
+                search_params: { max_results: 5 }
+            })
+        });
+
+        if (!res.ok) {
+            throw new Error(`Microservice responded with ${res.status}`);
+        }
+
+        const data = await res.json();
+        
+        if (data.suggested_songs && data.suggested_songs.length > 0) {
+            const videoIds = data.suggested_songs.map((s: any) => s.youtube_video_id).join(',');
+            await fetchSongs([], [], videoIds);
+        } else {
+             toast({
+                variant: "default",
+                title: "AI Note",
+                description: "The AI couldn't find any recommendations for you this time. Try liking a few more diverse songs!",
+            })
+        }
+
     } catch(e) {
       console.error("Failed to get AI recommendations", e);
        toast({
@@ -144,6 +161,8 @@ export default function TuneSwipeClient() {
         title: "AI Note",
         description: "Could not fetch AI recommendations at this time.",
       })
+    } finally {
+        setIsFetchingRecommendations(false);
     }
   }, [likedSongs, fetchSongs, isFetchingRecommendations, toast]);
 
@@ -196,7 +215,9 @@ export default function TuneSwipeClient() {
     const isLastCard = idx === 0;
     if (isLastCard) {
       if (likedSongs.length > 0) {
-        getRecommendations();
+        // We trigger recommendations based on number of liked songs now, not just when out of cards.
+        // If we run out, it's truly the end for this session.
+         setAppState('outOfCards');
       } else {
         setAppState('outOfCards');
       }

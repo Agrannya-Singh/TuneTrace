@@ -34,6 +34,9 @@ type AppState = 'moodSelection' | 'loading' | 'ready' | 'outOfCards' | 'error';
 const genres = ['Rap', 'Hip Hop', 'Pop', 'Rock', 'Indie', 'Electronic', 'R&B', 'Country', 'Alternative', 'Metal', 'Folk'];
 const moods = ['Chill', 'Upbeat', 'Workout', 'Party', 'Sad', 'Focus', 'Romantic', 'Energetic'];
 
+// NOTE: Replace this with your actual Render service name
+const SUGGESTION_SERVICE_BASE_URL = 'https://song-suggest-microservice.onrender.com';
+
 export default function TuneSwipeClient() {
   const [appState, setAppState] = useState<AppState>('moodSelection');
   const [songs, setSongs] = useState<Song[]>([]);
@@ -51,11 +54,10 @@ export default function TuneSwipeClient() {
 
   const fetchSongs = useCallback(async (genres: string[], moods: string[], videoIds?: string) => {
     if (videoIds) {
-      // Don't change app state when fetching recommendations in the background
       setIsFetchingRecommendations(true);
     } else {
       setAppState('loading');
-      setLikedSongs([]); // Reset liked songs on new search
+      setLikedSongs([]); 
     }
 
     try {
@@ -79,24 +81,21 @@ export default function TuneSwipeClient() {
         const fetchedSongs = await res.json();
       
       if (fetchedSongs.length > 0) {
-        const shuffledSongs = fetchedSongs.sort(() => Math.random() - 0.5);
+        const newSongs = fetchedSongs.filter((song: Song) => !songs.some(existing => existing.id === song.id));
         
-        if(videoIds) {
+        if (videoIds) {
           // Add recommended songs to the front of the swipe queue
           setSongs(prevSongs => {
-            const existingIds = new Set(prevSongs.map(s => s.id));
-            const newSongs = shuffledSongs.filter(s => !existingIds.has(s.id));
-            // New songs are at the end, current index should point to the first new song
-            const updatedSongs = [...prevSongs.slice(0, currentIndex + 1), ...newSongs];
+            const updatedSongs = [...newSongs, ...prevSongs.slice(currentIndex + 1)];
             setChildRefs(Array(updatedSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
-            // No need to change current index, as new cards are added after current
+            setCurrentIndex(updatedSongs.length - 1);
             return updatedSongs;
           });
         } else {
           // This is a new search, so replace the song list
-          setSongs(shuffledSongs);
-          setChildRefs(Array(shuffledSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
-          setCurrentIndex(shuffledSongs.length - 1);
+          setSongs(newSongs);
+          setChildRefs(Array(newSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
+          setCurrentIndex(newSongs.length - 1);
           setAppState('ready');
         }
       } else if (!videoIds) {
@@ -114,46 +113,33 @@ export default function TuneSwipeClient() {
         })
       }
     } finally {
-      if (videoIds) {
         setIsFetchingRecommendations(false);
-      }
     }
-  }, [toast, currentIndex]);
+  }, [toast, currentIndex, songs]);
 
 
-  const getRecommendations = useCallback(async () => {
-    if (isFetchingRecommendations || likedSongs.length === 0) return;
+  const getRecommendations = useCallback(async (songName: string) => {
+    if (isFetchingRecommendations) return;
     
     setIsFetchingRecommendations(true);
-    const likedSongInfo = likedSongs.map(s => `${s.title} by ${s.artist}`);
-
     try {
-        const res = await fetch('https://song-suggest-microservice.onrender.com/suggest-songs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                liked_songs: likedSongInfo,
-                search_params: { max_results: 10 }
-            })
-        });
-
-        const data = await res.json();
-
+        const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions?song_name=${encodeURIComponent(songName)}`);
+        
         if (!res.ok) {
-            throw new Error(data.detail || `Microservice responded with ${res.status}`);
+            const data = await res.json().catch(() => null);
+            throw new Error(data?.detail || `Microservice responded with ${res.status}`);
         }
         
-        if (data.suggested_songs && data.suggested_songs.length > 0) {
-            const videoIds = data.suggested_songs.map((s: any) => s.youtube_video_id).join(',');
+        const data = await res.json();
+        
+        if (data.suggestions && data.suggestions.length > 0) {
+            const videoIds = data.suggestions.map((s: any) => s.youtube_video_id).join(',');
             await fetchSongs([], [], videoIds);
-        } else {
              toast({
-                variant: "default",
-                title: "AI Note",
-                description: "The AI couldn't find any recommendations for you this time. Try liking a few more diverse songs!",
-            })
+                title: "New tracks added!",
+                description: "We added some recommendations based on your last swipe.",
+            });
         }
-
     } catch(e) {
       console.error("Failed to get AI recommendations", e);
       const errorMessage = e instanceof Error ? e.message : "Could not fetch AI recommendations at this time.";
@@ -165,7 +151,7 @@ export default function TuneSwipeClient() {
     } finally {
         setIsFetchingRecommendations(false);
     }
-  }, [likedSongs, fetchSongs, isFetchingRecommendations, toast]);
+  }, [fetchSongs, isFetchingRecommendations, toast]);
 
   const handleFindSongs = () => {
       fetchSongs(selectedGenres, selectedMoods);
@@ -177,6 +163,7 @@ export default function TuneSwipeClient() {
     setLikedSongs([]);
     setSelectedGenres([]);
     setSelectedMoods([]);
+    setCurrentIndex(0);
   }
 
   const handleCheckboxChange = (
@@ -195,34 +182,26 @@ export default function TuneSwipeClient() {
     currentIndexRef.current = val;
   };
 
-  const canSwipe = appState === 'ready' && currentIndex >= 0;
+  const canSwipe = appState === 'ready' && currentIndex >= 0 && currentIndex < songs.length;
 
   const swiped = (direction: 'left' | 'right', song: Song, index: number) => {
     if (direction === 'right') {
       setLikedSongs((prev) => [...prev, song]);
+      getRecommendations(song.title);
     }
     updateCurrentIndex(index - 1);
   };
 
   const outOfFrame = (songId: string, idx: number) => {
-    const isLastCard = idx === 0;
-    if (isLastCard) {
-      if (likedSongs.length > 0) {
-        // Trigger recommendations when out of cards
-        getRecommendations();
-        setAppState('outOfCards');
-      } else {
-        setAppState('outOfCards');
-      }
+    // When the last card is swiped away, check if we need to show the 'out of cards' state
+    if (currentIndexRef.current < 0) {
+      setAppState('outOfCards');
     }
   };
 
   const swipe = async (dir: 'left' | 'right') => {
-    if (canSwipe && currentIndex < songs.length) {
-      const cardRef = childRefs[currentIndex];
-      if (cardRef && cardRef.current) {
-        await cardRef.current.swipe(dir);
-      }
+    if (canSwipe && childRefs[currentIndex]) {
+      await childRefs[currentIndex]?.current?.swipe(dir);
     }
   };
 
@@ -231,7 +210,7 @@ export default function TuneSwipeClient() {
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-a.href = url;
+    a.href = url;
     a.download = 'tunetrace-liked-songs.txt';
     document.body.appendChild(a);
     a.click();
@@ -312,7 +291,7 @@ a.href = url;
         return (
           <div className="flex flex-col items-center justify-center w-full h-full">
             <div className="w-full max-w-sm h-[60vh] md:max-w-md md:h-[65vh] relative">
-              {songs.length > 0 && childRefs.length > 0 && currentIndex < songs.length ? (
+              {songs.length > 0 && childRefs.length > 0 ? (
                 songs.map((song, index) => (
                   <TinderCard
                     ref={childRefs[index]}
@@ -332,23 +311,13 @@ a.href = url;
 
               {(appState === 'outOfCards' || (songs.length > 0 && currentIndex < 0)) && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900/80 rounded-xl text-white text-center p-8">
-                  {isFetchingRecommendations ? (
-                     <>
-                      <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
-                      <h2 className="text-2xl font-bold">AI is thinking...</h2>
-                      <p className="text-neutral-300">Finding new tracks based on your taste.</p>
-                     </>
-                  ) : (
-                    <>
-                      <Music className="h-16 w-16 mb-4 text-primary" />
-                      <h2 className="text-2xl font-bold">You've reached the end!</h2>
-                      <p className="text-neutral-300 mb-4">You've swiped through all the tracks for this vibe.</p>
-                      <Button onClick={handleRestart}>
-                        <RotateCw className="mr-2" />
-                        Start New Search
-                      </Button>
-                    </>
-                  )}
+                  <Music className="h-16 w-16 mb-4 text-primary" />
+                  <h2 className="text-2xl font-bold">You've reached the end!</h2>
+                  <p className="text-neutral-300 mb-4">You've swiped through all the tracks for this vibe.</p>
+                  <Button onClick={handleRestart}>
+                    <RotateCw className="mr-2" />
+                    Start New Search
+                  </Button>
                 </div>
               )}
             </div>
@@ -431,5 +400,3 @@ a.href = url;
     </div>
   );
 }
-
-    

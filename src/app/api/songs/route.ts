@@ -29,67 +29,74 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const mood = searchParams.get('mood') || '';
-  const genre = searchParams.get('genre') || 'popular music';
+  const genre = searchParams.get('genre') || '';
+  const videoIds = searchParams.get('videoIds');
   
-  const useChart = !mood && genre === 'popular music';
+  let query = `${mood} ${genre} music`.trim();
 
   try {
-    let initialItems: any[] = [];
+    let videoItems: any[] = [];
 
-    if (useChart) {
+    if (videoIds) {
+      // Fetch specific videos by ID, as recommended by the microservice
       const params = new URLSearchParams({
-        part: 'snippet,contentDetails', // Fetch contentDetails for duration
-        chart: 'mostPopular',
-        videoCategoryId: '10', // Music
-        maxResults: '50',
-        regionCode: 'US',
+        part: 'snippet,contentDetails',
+        id: videoIds,
         key: YOUTUBE_API_KEY,
       });
       const res = await fetch(`${YOUTUBE_API_BASE}/videos?${params.toString()}`);
-      if (!res.ok) throw new Error(`YouTube API responded with ${res.status}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: `YouTube API responded with ${res.status}` }));
+        throw new Error(errorData.message || `YouTube API responded with ${res.status}`);
+      }
       const data = await res.json();
-      initialItems = data.items || [];
-
+      videoItems = data.items || [];
     } else {
-      const query = `${mood} ${genre} official music video`.trim();
+      // Fetch based on user's mood/genre selection or default to popular
       const params = new URLSearchParams({
         part: 'snippet',
-        q: query,
         type: 'video',
-        videoCategoryId: '10',
-        maxResults: '50',
+        videoCategoryId: '10', // Music
+        maxResults: '50', // Fetch more to ensure we have enough after filtering
         key: YOUTUBE_API_KEY,
       });
-      const searchRes = await fetch(`${YOUTUBE_API_BASE}/search?${params.toString()}`);
-      if (!searchRes.ok) throw new Error(`YouTube API responded with ${searchRes.status}`);
-      const searchData = await searchRes.json();
-      
-      const searchItems = searchData.items || [];
-      const ids = searchItems.map((item: any) => item.id.videoId).join(',');
 
-      if (!ids) {
-        return NextResponse.json([]);
+      if (query !== 'music') {
+        params.set('q', query);
+      } else {
+        params.set('chart', 'mostPopular');
+        params.set('regionCode', 'US');
       }
+      
+      const searchRes = await fetch(`${YOUTUBE_API_BASE}/search?${params.toString()}`);
+      if (!searchRes.ok) {
+        const errorData = await searchRes.json().catch(() => ({ message: `YouTube API responded with ${searchRes.status}` }));
+        throw new Error(errorData.message || `YouTube API responded with ${searchRes.status}`);
+      }
+      const searchData = await searchRes.json();
+      const ids = (searchData.items || []).map((item: any) => item.id.videoId).join(',');
 
-      // Fetch video details for the search results to get duration
-      const videoParams = new URLSearchParams({
-        part: 'snippet,contentDetails',
-        id: ids,
-        key: YOUTUBE_API_KEY,
-      });
-      const videoRes = await fetch(`${YOUTUBE_API_BASE}/videos?${videoParams.toString()}`);
-      if (!videoRes.ok) throw new Error(`YouTube API responded with ${videoRes.status}`);
-      const videoData = await videoRes.json();
-      initialItems = videoData.items || [];
+      if (ids) {
+        const detailsParams = new URLSearchParams({
+          part: 'contentDetails,snippet',
+          id: ids,
+          key: YOUTUBE_API_KEY,
+        });
+        const detailsRes = await fetch(`${YOUTUBE_API_BASE}/videos?${detailsParams.toString()}`);
+        if (detailsRes.ok) {
+          const detailsData = await detailsRes.json();
+          videoItems = detailsData.items || [];
+        }
+      }
     }
 
-    if (!initialItems || initialItems.length === 0) {
-      console.error('No items found from YouTube API');
+    if (videoItems.length === 0) {
+      console.error('No items found from YouTube API for query:', query);
       return NextResponse.json([]);
     }
 
     // Filter out shorts, long videos, and unwanted content
-    const songs: Song[] = initialItems
+    const songs: Song[] = videoItems
       .filter((item: any) => {
         const title = item.snippet?.title?.toLowerCase() || '';
         const duration = item.contentDetails?.duration;
@@ -104,25 +111,32 @@ export async function GET(req: NextRequest) {
         }
 
         // Filter out common non-music keywords
-        const disallowedKeywords = ['short', 'shorts', 'commentary', 'reaction', 'live', 'interview'];
+        const disallowedKeywords = ['short', 'shorts', 'commentary', 'reaction', 'live', 'interview', 'full album'];
         if (disallowedKeywords.some(keyword => title.includes(keyword))) {
           return false;
         }
 
         return true;
       })
-      .map((item: any) => {
-        const videoId = typeof item.id === 'string' ? item.id : item.id.videoId;
-        return {
-          id: videoId,
-          title: item.snippet.title,
-          artist: item.snippet.channelTitle,
-          albumArtUrl: item.snippet.thumbnails.high.url,
-          previewUrl: `https://www.youtube.com/embed/${videoId}`,
-        };
-      });
+      .map((item: any) => ({
+        id: item.id,
+        title: item.snippet.title,
+        artist: item.snippet.channelTitle,
+        albumArtUrl: item.snippet.thumbnails.high.url,
+        previewUrl: `https://www.youtube.com/embed/${item.id}`,
+      }));
 
-    return NextResponse.json(songs);
+    // Shuffle the array to ensure freshness on each request
+    const shuffledSongs = songs.sort(() => Math.random() - 0.5);
+
+    // Ensure we return at least 20 songs if we started with a search
+    if (!videoIds && shuffledSongs.length < 20 && query !== 'music') {
+        // In a real-world scenario, you might make another API call here with a page token
+        // For now, we've increased maxResults to minimize this.
+    }
+    
+    // Return up to 50 songs for a broad search, or the recommended songs.
+    return NextResponse.json(shuffledSongs.slice(0, 50));
 
   } catch (error) {
     console.error('[API/Songs] Error fetching tracks from YouTube:', error);

@@ -4,6 +4,13 @@ import { type NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 
+/**
+ * Handles POST requests to log error information with context to a server-side log file.
+ *
+ * Expects a JSON body containing `error` and `context` fields. If either field is missing, responds with a 400 status and an error message. On success, appends a timestamped log entry to `recommendation-errors.log` and returns a 200 status with a confirmation message. If an internal error occurs, responds with a 500 status and error details.
+ *
+ * @returns A NextResponse indicating the result of the logging operation.
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

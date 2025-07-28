@@ -36,6 +36,14 @@ const moods = ['Chill', 'Upbeat', 'Workout', 'Party', 'Sad', 'Focus', 'Romantic'
 // This should be replaced with the actual deployed FastAPI service URL
 const SUGGESTION_SERVICE_BASE_URL = 'https://your-fastapi-service-url.com'; 
 
+/**
+ * Sends error details and context information to the backend logging endpoint.
+ *
+ * Attempts to POST the provided error and context to `/api/log`. If the logging request fails, the error is logged to the console.
+ *
+ * @param error - The error object or message to log
+ * @param context - Additional context describing where or how the error occurred
+ */
 async function logRecommendationError(error: any, context: string) {
   try {
     await fetch('/api/log', {
@@ -48,6 +56,13 @@ async function logRecommendationError(error: any, context: string) {
   }
 }
 
+/**
+ * Provides a swipe-based music discovery interface where users can select genres and moods, swipe through song cards, like tracks, and receive personalized recommendations.
+ *
+ * Users begin by selecting genres and moods or leaving them blank to view top charts. Songs are presented as swipeable cards; swiping right adds a song to the liked list. When all cards are swiped, the component fetches new recommendations based on liked songs from an external microservice. The UI adapts to loading, error, and empty states, and users can download their liked songs or restart the discovery process at any time.
+ *
+ * @returns The rendered music discovery UI as a React component.
+ */
 export default function TuneSwipeClient() {
   const [appState, setAppState] = useState<AppState>('moodSelection');
   const [songs, setSongs] = useState<Song[]>([]);

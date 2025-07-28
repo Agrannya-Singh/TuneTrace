@@ -9,6 +9,14 @@ interface SongCardProps {
   isActive: boolean;
 }
 
+/**
+ * Displays a music track card with album art, title, and artist, allowing users to preview the song in a new tab if available.
+ *
+ * Renders an interactive card featuring the song's album art (with fallback), title, and artist. Clicking the card opens the song's preview URL in a new browser tab if provided.
+ *
+ * @param song - The song data to display, including title, artist, album art, and optional preview URL.
+ * @param isActive - Whether the card is currently active, used to prioritize image loading.
+ */
 export function SongCard({ song, isActive }: SongCardProps) {
   const openPreview = () => {
     if (song.previewUrl) {

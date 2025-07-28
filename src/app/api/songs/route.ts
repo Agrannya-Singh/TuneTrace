@@ -1,4 +1,3 @@
-
 'use server';
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -18,6 +17,11 @@ function durationToSeconds(duration: string): number {
   }
 }
 
+/**
+ * Handles GET requests to fetch a list of music videos from the YouTube API based on mood, genre, or specific video IDs.
+ *
+ * Extracts query parameters from the request to determine the search criteria. If `videoIds` are provided, retrieves details for those specific videos. Otherwise, performs a search using the provided mood and genre, or defaults to the most popular music videos. Filters out shorts, long videos, and videos with disallowed keywords. Returns up to 50 randomly shuffled songs in JSON format, each containing video ID, title, artist, album art URL, and a YouTube embed preview URL. Returns an empty array if no suitable videos are found. Responds with an error message and appropriate status code if the YouTube API key is missing or if an error occurs during processing.
+ */
 export async function GET(req: NextRequest) {
   if (!YOUTUBE_API_KEY) {
     console.error('YouTube API key is not set in .env file');

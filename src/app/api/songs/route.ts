@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
       const searchRes = await fetch(`${YOUTUBE_API_BASE}/search?${params.toString()}`);
       if (!searchRes.ok) {
         const errorData = await searchRes.json().catch(() => ({ message: `YouTube API responded with ${searchRes.status}` }));
-        throw new Error(errorData.message || `YouTube API responded with ${res.status}`);
+        throw new Error(errorData.message || `YouTube API responded with ${searchRes.status}`);
       }
       const searchData = await searchRes.json();
       const ids = (searchData.items || []).map((item: any) => item.id.videoId).join(',');
@@ -132,7 +132,7 @@ export async function GET(req: NextRequest) {
     // Ensure we return at least 20 songs if we started with a search
     if (!videoIds && shuffledSongs.length < 20 && query !== 'music') {
         // In a real-world scenario, you might make another API call here with a page token
-        // For now, we'll just return what we have, but we've increased maxResults to minimize this.
+        // For now, we've increased maxResults to minimize this.
     }
     
     // Return up to 50 songs for a broad search, or the recommended songs.

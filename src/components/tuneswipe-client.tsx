@@ -109,7 +109,7 @@ export default function TuneSwipeClient() {
         const errorMessage = error instanceof Error ? error.message : "Could not fetch songs. Please try again later.";
         toast({
           variant: "destructive",
-          title: "Error",
+          title: "Error Fetching Songs",
           description: errorMessage,
         })
       }
@@ -158,8 +158,8 @@ export default function TuneSwipeClient() {
       console.error("Failed to get AI recommendations", e);
       const errorMessage = e instanceof Error ? e.message : "Could not fetch AI recommendations at this time.";
        toast({
-        variant: "default",
-        title: "AI Note",
+        variant: "destructive",
+        title: "Recommendation Error",
         description: errorMessage,
       })
     } finally {

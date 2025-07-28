@@ -53,7 +53,7 @@ Ready to run your own TuneSwipe locally? It's easy!
 
 1.  **Clone the repository:**
     ```bash
-    git clone [your-repo-url]
+    git clone https://github.com/Agrannya-Singh/TuneTrace
     ```
 
 2.  **Install dependencies:**

@@ -33,14 +33,15 @@ type AppState = 'moodSelection' | 'loading' | 'ready' | 'outOfCards' | 'error';
 const genres = ['Rap', 'Hip Hop', 'Pop', 'Rock', 'Indie', 'Electronic', 'R&B', 'Country', 'Alternative', 'Metal', 'Folk'];
 const moods = ['Chill', 'Upbeat', 'Workout', 'Party', 'Sad', 'Focus', 'Romantic', 'Energetic'];
 
-const SUGGESTION_SERVICE_BASE_URL = 'https://song-suggest-microservice.onrender.com';
+// This should be replaced with the actual deployed FastAPI service URL
+const SUGGESTION_SERVICE_BASE_URL = 'https://your-fastapi-service-url.com'; 
 
-async function logRecommendationError(error: any, songName: string) {
+async function logRecommendationError(error: any, context: string) {
   try {
     await fetch('/api/log', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error, songName }),
+      body: JSON.stringify({ error, context }),
     });
   } catch (e) {
     console.error("Failed to write to log endpoint:", e);
@@ -88,7 +89,16 @@ export default function TuneSwipeClient() {
           throw new Error(errorData.error || `Server responded with ${res.status}`);
         }
         
-        const fetchedSongs = await res.json();
+        let fetchedSongs = await res.json();
+        
+        if (fetchedSongs.length < 20 && !videoIds) {
+            // Not a robust solution, but attempts to get more variety if the first batch is small
+            const secondRes = await fetch(`/api/songs?${params.toString()}&pageToken=next`);
+            if (secondRes.ok) {
+                const extraSongs = await secondRes.json();
+                fetchedSongs = [...fetchedSongs, ...extraSongs.filter((s: Song) => !fetchedSongs.some((fs: Song) => fs.id === s.id))];
+            }
+        }
       
       if (fetchedSongs.length > 0) {
         const newSongs = fetchedSongs.filter((song: Song) => !songs.some(existing => existing.id === song.id));
@@ -101,6 +111,7 @@ export default function TuneSwipeClient() {
             setCurrentIndex(updatedSongs.length - 1);
             return updatedSongs;
           });
+          setAppState('ready');
         } else {
           // This is a new search, so replace the song list
           setSongs(newSongs);
@@ -128,12 +139,23 @@ export default function TuneSwipeClient() {
   }, [toast, currentIndex, songs]);
 
 
-  const getRecommendations = useCallback(async (songName: string) => {
-    if (isFetchingRecommendations) return;
+  const getRecommendations = useCallback(async () => {
+    if (isFetchingRecommendations || likedSongs.length === 0) return;
     
     setIsFetchingRecommendations(true);
+    setAppState('loading'); // Show loading state while getting new recommendations
+
     try {
-        const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions?song_name=${encodeURIComponent(songName)}`);
+        // NOTE: Assuming a user_id is available. For now, using a placeholder.
+        // In a real app, this would come from an authentication context.
+        const userId = "test-user";
+        const songTitles = likedSongs.map(s => `${s.title} - ${s.artist}`);
+
+        const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, songs: songTitles })
+        });
         
         if (!res.ok) {
             const data = await res.json().catch(() => null);
@@ -146,23 +168,33 @@ export default function TuneSwipeClient() {
             const videoIds = data.suggestions.map((s: any) => s.youtube_video_id).join(',');
             await fetchSongs([], [], videoIds);
              toast({
-                title: "New tracks added!",
-                description: "We added some recommendations based on your last swipe.",
+                title: "Here are some new tracks!",
+                description: "We've curated these recommendations based on your likes.",
             });
+        } else {
+             setAppState('outOfCards'); // No more recommendations to show
         }
     } catch(e) {
-      console.error("Failed to get AI recommendations", e);
-      const errorMessage = e instanceof Error ? e.message : "Could not fetch AI recommendations at this time.";
+      console.error("Failed to get recommendations", e);
+      const errorMessage = e instanceof Error ? e.message : "Could not fetch recommendations at this time.";
        toast({
         variant: "destructive",
         title: "Recommendation Error",
         description: errorMessage,
       })
-      await logRecommendationError(errorMessage, songName);
+      await logRecommendationError(errorMessage, "getRecommendations");
+      setAppState('outOfCards'); // Fallback to out of cards state
     } finally {
         setIsFetchingRecommendations(false);
     }
-  }, [fetchSongs, isFetchingRecommendations, toast]);
+  }, [fetchSongs, isFetchingRecommendations, toast, likedSongs]);
+
+
+  useEffect(() => {
+    if (appState === 'outOfCards' && likedSongs.length > 0) {
+        getRecommendations();
+    }
+  }, [appState, likedSongs, getRecommendations]);
 
   const handleFindSongs = () => {
       fetchSongs(selectedGenres, selectedMoods);
@@ -198,12 +230,12 @@ export default function TuneSwipeClient() {
   const swiped = (direction: 'left' | 'right', song: Song, index: number) => {
     if (direction === 'right') {
       setLikedSongs((prev) => [...prev, song]);
-      getRecommendations(song.title);
     }
     updateCurrentIndex(index - 1);
   };
 
   const outOfFrame = (songId: string, idx: number) => {
+    // Check if the card that went out of frame was the last one
     if (currentIndexRef.current < 0) {
       setAppState('outOfCards');
     }
@@ -297,7 +329,6 @@ export default function TuneSwipeClient() {
           </div>
         );
       case 'ready':
-      case 'outOfCards':
         return (
           <div className="flex flex-col items-center justify-center w-full h-full">
             <div className="w-full max-w-sm h-[60vh] md:max-w-md md:h-[65vh] relative">
@@ -318,18 +349,6 @@ export default function TuneSwipeClient() {
                   </TinderCard>
                 ))
               ) : null }
-
-              {(appState === 'outOfCards' || (songs.length > 0 && currentIndex < 0)) && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900/80 rounded-xl text-white text-center p-8">
-                  <Music className="h-16 w-16 mb-4 text-primary" />
-                  <h2 className="text-2xl font-bold">You've reached the end!</h2>
-                  <p className="text-neutral-300 mb-4">You've swiped through all the tracks for this vibe.</p>
-                  <Button onClick={handleRestart}>
-                    <RotateCw className="mr-2" />
-                    Start New Search
-                  </Button>
-                </div>
-              )}
             </div>
             
             <div className="flex items-center gap-8 mt-8">
@@ -384,6 +403,18 @@ export default function TuneSwipeClient() {
               New Search
             </Button>
           </div>
+        );
+      case 'outOfCards':
+        return (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900/80 rounded-xl text-white text-center p-8">
+                <Music className="h-16 w-16 mb-4 text-primary" />
+                <h2 className="text-2xl font-bold">You've reached the end!</h2>
+                <p className="text-neutral-300 mb-4">You've swiped through all the tracks for this vibe.</p>
+                <Button onClick={handleRestart}>
+                    <RotateCw className="mr-2" />
+                    Start New Search
+                </Button>
+            </div>
         );
       case 'error':
         return (

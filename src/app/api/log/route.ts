@@ -7,18 +7,18 @@ import path from 'path';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { error, songName } = body;
+    const { error, context } = body;
 
-    if (!error || !songName) {
+    if (!error || !context) {
       return new NextResponse(
-        JSON.stringify({ message: 'Missing error or songName in request body.' }),
+        JSON.stringify({ message: 'Missing error or context in request body.' }),
         { status: 400 }
       );
     }
 
     const logFilePath = path.join(process.cwd(), 'recommendation-errors.log');
     const timestamp = new Date().toISOString();
-    const logMessage = `[${timestamp}] Error for song "${songName}": ${JSON.stringify(error)}\n`;
+    const logMessage = `[${timestamp}] Error during "${context}": ${JSON.stringify(error)}\n`;
 
     await fs.appendFile(logFilePath, logMessage);
 

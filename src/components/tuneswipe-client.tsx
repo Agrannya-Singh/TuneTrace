@@ -133,7 +133,7 @@ export default function TuneSwipeClient() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 liked_songs: likedSongInfo,
-                search_params: { max_results: 5 }
+                search_params: { max_results: 10 } // Ask for more recommendations
             })
         });
 
@@ -165,14 +165,6 @@ export default function TuneSwipeClient() {
         setIsFetchingRecommendations(false);
     }
   }, [likedSongs, fetchSongs, isFetchingRecommendations, toast]);
-
-  useEffect(() => {
-    // After 5 liked songs, fetch recommendations
-    if (likedSongs.length > 0 && likedSongs.length % 5 === 0) {
-        getRecommendations();
-    }
-  }, [likedSongs, getRecommendations]);
-
 
   const handleFindSongs = () => {
       fetchSongs(selectedGenres, selectedMoods);
@@ -215,9 +207,9 @@ export default function TuneSwipeClient() {
     const isLastCard = idx === 0;
     if (isLastCard) {
       if (likedSongs.length > 0) {
-        // We trigger recommendations based on number of liked songs now, not just when out of cards.
-        // If we run out, it's truly the end for this session.
-         setAppState('outOfCards');
+        // Trigger recommendations when out of cards
+        getRecommendations();
+        setAppState('outOfCards');
       } else {
         setAppState('outOfCards');
       }

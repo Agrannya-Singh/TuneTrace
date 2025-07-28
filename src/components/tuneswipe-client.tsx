@@ -133,15 +133,15 @@ export default function TuneSwipeClient() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 liked_songs: likedSongInfo,
-                search_params: { max_results: 10 } // Ask for more recommendations
+                search_params: { max_results: 10 }
             })
         });
 
-        if (!res.ok) {
-            throw new Error(`Microservice responded with ${res.status}`);
-        }
-
         const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.detail || `Microservice responded with ${res.status}`);
+        }
         
         if (data.suggested_songs && data.suggested_songs.length > 0) {
             const videoIds = data.suggested_songs.map((s: any) => s.youtube_video_id).join(',');
@@ -156,10 +156,11 @@ export default function TuneSwipeClient() {
 
     } catch(e) {
       console.error("Failed to get AI recommendations", e);
+      const errorMessage = e instanceof Error ? e.message : "Could not fetch AI recommendations at this time.";
        toast({
         variant: "default",
         title: "AI Note",
-        description: "Could not fetch AI recommendations at this time.",
+        description: errorMessage,
       })
     } finally {
         setIsFetchingRecommendations(false);
@@ -394,6 +395,12 @@ a.href = url;
                 <Heart className="h-10 w-10" />
               </Button>
             </div>
+             {isFetchingRecommendations && (
+                <div className="flex items-center text-sm text-muted-foreground mt-4">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <span>Getting new recommendations...</span>
+                </div>
+            )}
             <Button variant="link" className="mt-4 text-muted-foreground" onClick={handleRestart}>
               New Search
             </Button>
@@ -424,3 +431,5 @@ a.href = url;
     </div>
   );
 }
+
+    

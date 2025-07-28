@@ -45,7 +45,8 @@ TuneSwipe is a modern, full-stack web application built with a powerful and fast
 - **Generative AI**: **[Genkit by Firebase](https://firebase.google.com/docs/genkit)** to integrate and manage large language models that power the recommendation engine.
 - **Music Data Source**: **[YouTube Data API](https://developers.google.com/youtube/v3)** to source an endless stream of individual music videos for swiping.
 
-- <img width="1452" height="627" alt="image" src="https://github.com/user-attachments/assets/04a99925-028b-4e2a-b010-a23bb2868cb2" />
+- <img width="1397" height="897" alt="image" src="https://github.com/user-attachments/assets/0671b80d-2462-4597-8ee0-5a7b1671d129" />
+
 
 
 ---

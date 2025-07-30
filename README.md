@@ -47,9 +47,11 @@ TuneSwipe is a modern, full-stack web application built with a powerful and fast
 
 - <img width="1397" height="897" alt="image" src="https://github.com/user-attachments/assets/0671b80d-2462-4597-8ee0-5a7b1671d129" />
 
-proposed changes in TuneTrace 2.0
+changes in TuneTrace 2.0
 
 <img width="1474" height="839" alt="image" src="https://github.com/user-attachments/assets/154675ab-0a0e-40e8-9d10-3951022e6ad3" />
+
+<img  width="1397" height="897" alt="image" src="https://raw.githubusercontent.com/Agrannya-Singh/TuneTrace/refs/heads/Version-2/diagram-export-7-30-2025-9_05_36-PM.png">
 
 
 

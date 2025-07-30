@@ -33,8 +33,7 @@ type AppState = 'moodSelection' | 'loading' | 'ready' | 'outOfCards' | 'error';
 const genres = ['Rap', 'Hip Hop', 'Pop', 'Rock', 'Indie', 'Electronic', 'R&B', 'Country', 'Alternative', 'Metal', 'Folk'];
 const moods = ['Chill', 'Upbeat', 'Workout', 'Party', 'Sad', 'Focus', 'Romantic', 'Energetic'];
 
-// This should be replaced with the actual deployed FastAPI service URL
-const SUGGESTION_SERVICE_BASE_URL = 'https://your-fastapi-service-url.com'; 
+const SUGGESTION_SERVICE_BASE_URL = 'https://song-suggest-microservice.onrender.com'; 
 
 async function logRecommendationError(error: any, context: string) {
   try {

@@ -26,6 +26,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
+import { SpotifyIntegration } from './spotify-integration';
 
 
 type AppState = 'moodSelection' | 'loading' | 'ready' | 'outOfCards' | 'error';
@@ -72,6 +73,8 @@ export default function TuneSwipeClient() {
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
   const [isFetchingRecommendations, setIsFetchingRecommendations] = useState(false);
+  const [showSpotifyIntegration, setShowSpotifyIntegration] = useState(false);
+  const [selectedSource, setSelectedSource] = useState<'youtube' | 'spotify'>('youtube');
 
   const { toast } = useToast();
 
@@ -86,71 +89,93 @@ export default function TuneSwipeClient() {
     }
 
     try {
-        const params = new URLSearchParams();
+        const pythonBackendUrl = process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || 'http://localhost:8000';
+        
         if (videoIds) {
-            params.set('videoIds', videoIds);
+            // Get recommendations from Python backend
+            const response = await fetch(`${pythonBackendUrl}/api/recommendations`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    liked_songs: likedSongs,
+                    limit: 20,
+                    source: selectedSource
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'An unknown error occurred' }));
+                throw new Error(errorData.error || `Server responded with ${response.status}`);
+            }
+            
+            const data = await response.json();
+            let fetchedSongs = data.songs || [];
+            
+            if (fetchedSongs.length > 0) {
+                const newSongs = fetchedSongs.filter((song: Song) => !songs.some(existing => existing.id === song.id));
+                
+                // Add recommended songs to the front of the swipe queue
+                setSongs(prevSongs => {
+                    const updatedSongs = [...newSongs, ...prevSongs.slice(currentIndex + 1)];
+                    setChildRefs(Array(updatedSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
+                    setCurrentIndex(updatedSongs.length - 1);
+                    return updatedSongs;
+                });
+                setAppState('ready');
+            }
         } else {
-            const genreQuery = genres.join(' ');
-            const moodQuery = moods.join(' ');
-            params.set('mood', moodQuery);
-            params.set('genre', genreQuery);
-        }
-
-        const res = await fetch(`/api/songs?${params.toString()}`);
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({ error: 'An unknown error occurred' }));
-          throw new Error(errorData.error || `Server responded with ${res.status}`);
-        }
-        
-        let fetchedSongs = await res.json();
-        
-        if (fetchedSongs.length < 20 && !videoIds) {
-            // Not a robust solution, but attempts to get more variety if the first batch is small
-            const secondRes = await fetch(`/api/songs?${params.toString()}&pageToken=next`);
-            if (secondRes.ok) {
-                const extraSongs = await secondRes.json();
-                fetchedSongs = [...fetchedSongs, ...extraSongs.filter((s: Song) => !fetchedSongs.some((fs: Song) => fs.id === s.id))];
+            // Search for songs
+            const searchQuery = `${moods.join(' ')} ${genres.join(' ')} music`.trim() || 'popular music';
+            
+            const response = await fetch(`${pythonBackendUrl}/api/search`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query: searchQuery,
+                    source: selectedSource,
+                    limit: 20
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'An unknown error occurred' }));
+                throw new Error(errorData.error || `Server responded with ${response.status}`);
+            }
+            
+            const data = await response.json();
+            let fetchedSongs = data.songs || [];
+            
+            if (fetchedSongs.length > 0) {
+                const newSongs = fetchedSongs.filter((song: Song) => !songs.some(existing => existing.id === song.id));
+                
+                // This is a new search, so replace the song list
+                setSongs(newSongs);
+                setChildRefs(Array(newSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
+                setCurrentIndex(newSongs.length - 1);
+                setAppState('ready');
+            } else {
+                setAppState('outOfCards');
             }
         }
-      
-      if (fetchedSongs.length > 0) {
-        const newSongs = fetchedSongs.filter((song: Song) => !songs.some(existing => existing.id === song.id));
-        
-        if (videoIds) {
-          // Add recommended songs to the front of the swipe queue
-          setSongs(prevSongs => {
-            const updatedSongs = [...newSongs, ...prevSongs.slice(currentIndex + 1)];
-            setChildRefs(Array(updatedSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
-            setCurrentIndex(updatedSongs.length - 1);
-            return updatedSongs;
-          });
-          setAppState('ready');
-        } else {
-          // This is a new search, so replace the song list
-          setSongs(newSongs);
-          setChildRefs(Array(newSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
-          setCurrentIndex(newSongs.length - 1);
-          setAppState('ready');
-        }
-      } else if (!videoIds) {
-        setAppState('outOfCards');
-      }
     } catch (error) {
-      console.error('Error fetching songs:', error);
-      if (!videoIds) {
-        setAppState('error');
-        const errorMessage = error instanceof Error ? error.message : "Could not fetch songs. Please try again later.";
-        toast({
-          variant: "destructive",
-          title: "Error Fetching Songs",
-          description: errorMessage,
-        })
-      }
+        console.error('Error fetching songs:', error);
+        if (!videoIds) {
+            setAppState('error');
+            const errorMessage = error instanceof Error ? error.message : "Could not fetch songs. Please try again later.";
+            toast({
+                variant: "destructive",
+                title: "Error Fetching Songs",
+                description: errorMessage,
+            })
+        }
     } finally {
         setIsFetchingRecommendations(false);
     }
-  }, [toast, currentIndex, songs]);
+  }, [toast, currentIndex, songs, likedSongs, selectedSource]);
 
 
   const getRecommendations = useCallback(async () => {
@@ -327,10 +352,45 @@ export default function TuneSwipeClient() {
                     </ScrollArea>
                   </div>
                 </div>
-                <Button type="submit" className="w-full mt-6">
-                  <Search className="mr-2 h-4 w-4" />
-                  Find Music
-                </Button>
+                <div className="space-y-4 mt-6">
+                  <div>
+                    <Label className="text-lg font-semibold mb-2 block">Music Source</Label>
+                    <div className="flex gap-4">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id="youtube"
+                          name="source"
+                          value="youtube"
+                          checked={selectedSource === 'youtube'}
+                          onChange={(e) => setSelectedSource(e.target.value as 'youtube' | 'spotify')}
+                          className="w-4 h-4"
+                        />
+                        <label htmlFor="youtube" className="text-sm font-medium">
+                          YouTube Music
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id="spotify"
+                          name="source"
+                          value="spotify"
+                          checked={selectedSource === 'spotify'}
+                          onChange={(e) => setSelectedSource(e.target.value as 'youtube' | 'spotify')}
+                          className="w-4 h-4"
+                        />
+                        <label htmlFor="spotify" className="text-sm font-medium">
+                          Spotify
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full">
+                    <Search className="mr-2 h-4 w-4" />
+                    Find Music
+                  </Button>
+                </div>
               </form>
             </CardContent>
           </Card>
@@ -375,32 +435,51 @@ export default function TuneSwipeClient() {
                       <ListMusic className="h-8 w-8" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-[600px]">
                   <DialogHeader>
-                    <DialogTitle>Liked Songs</DialogTitle>
+                    <DialogTitle>Liked Songs & Spotify Integration</DialogTitle>
                     <DialogDescription>
-                      Here are the songs you've liked. You can download this list as a text file.
+                      Here are the songs you've liked. You can download this list as a text file or create a Spotify playlist.
                     </DialogDescription>
                   </DialogHeader>
-                  <ScrollArea className="h-72 w-full rounded-md border p-4">
-                     {likedSongs.length > 0 ? (
-                        <ul className="space-y-2">
-                          {likedSongs.map((song) => (
-                            <li key={song.id} className="text-sm">
-                              {song.title} - <span className="text-muted-foreground">{song.artist}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-muted-foreground text-center">You haven't liked any songs yet.</p>
-                      )}
-                  </ScrollArea>
-                  <DialogFooter>
-                    <Button onClick={downloadLikedSongs} disabled={likedSongs.length === 0}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download List
-                    </Button>
-                  </DialogFooter>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="font-semibold mb-2">Liked Songs</h3>
+                      <ScrollArea className="h-72 w-full rounded-md border p-4">
+                         {likedSongs.length > 0 ? (
+                            <ul className="space-y-2">
+                              {likedSongs.map((song) => (
+                                <li key={song.id} className="text-sm">
+                                  {song.title} - <span className="text-muted-foreground">{song.artist}</span>
+                                  {song.source === 'spotify' && (
+                                    <span className="ml-2 text-xs bg-green-100 text-green-800 px-1 rounded">Spotify</span>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-sm text-muted-foreground text-center">You haven't liked any songs yet.</p>
+                          )}
+                      </ScrollArea>
+                      <div className="mt-2">
+                        <Button onClick={downloadLikedSongs} disabled={likedSongs.length === 0} size="sm">
+                          <Download className="mr-2 h-4 w-4" />
+                          Download List
+                        </Button>
+                      </div>
+                    </div>
+                    <div>
+                      <SpotifyIntegration 
+                        likedSongs={likedSongs}
+                        onPlaylistCreated={() => {
+                          toast({
+                            title: "Success!",
+                            description: "Your Spotify playlist has been created!",
+                          });
+                        }}
+                      />
+                    </div>
+                  </div>
                 </DialogContent>
               </Dialog>
               <Button variant="outline" size="icon" className="w-20 h-20 rounded-full bg-white/10 border-primary/50 text-primary hover:bg-primary/20 hover:text-green-400 disabled:opacity-50 transition-all transform hover:scale-110" onClick={() => swipe('right')} disabled={!canSwipe}>

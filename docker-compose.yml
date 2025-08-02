@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_PYTHON_BACKEND_URL=http://backend:8000
+    depends_on:
+      - backend
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - tunetrace-network
+
+  # Backend (Python FastAPI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHON_BACKEND_URL=http://localhost:8000
+      - DATABASE_URL=sqlite:///./tunetrace.db
+      - ML_MODEL_PATH=./ml_models/recommendation_model.pkl
+    volumes:
+      - ./backend:/app
+      - tunetrace-data:/app/data
+    networks:
+      - tunetrace-network
+
+volumes:
+  tunetrace-data:
+
+networks:
+  tunetrace-network:
+    driver: bridge 

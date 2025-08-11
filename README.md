@@ -42,7 +42,6 @@ TuneSwipe is a modern, full-stack web application built with a powerful and fast
 ### Backend & Services
 - **Primary API**: **[Next.js API Routes](https://nextjs.org/docs/app/building-your-application/routing/route-handlers)** to handle initial song fetching and server-side logic.
 - **AI Recommendations**: A **[Python](https://www.python.org/)** microservice built with **[FastAPI](https://fastapi.tiangolo.com/)** that takes a user's liked songs and returns personalized recommendations.
-- **Generative AI**: **[Genkit by Firebase](https://firebase.google.com/docs/genkit)** to integrate and manage large language models that power the recommendation engine.
 - **Music Data Source**: **[YouTube Data API](https://developers.google.com/youtube/v3)** to source an endless stream of individual music videos for swiping.
 
 - <img width="1397" height="897" alt="image" src="https://github.com/user-attachments/assets/0671b80d-2462-4597-8ee0-5a7b1671d129" />
@@ -53,8 +52,7 @@ changes in TuneTrace 2.0
 
 <img  width="1397" height="897" alt="image" src="https://raw.githubusercontent.com/Agrannya-Singh/TuneTrace/refs/heads/Version-2/diagram-export-7-30-2025-9_05_36-PM.png">
 
-
-
+<img src="https://raw.githubusercontent.com/Agrannya-Singh/Tune_Trace_backend/f233e2b00fbcf72475e853e0dbe2db9b8e49e48b/mermaid.svg" width="1397" height="897">
 
 
 ---

@@ -5,3 +5,4 @@ export interface Song {
   albumArtUrl: string; // YouTube Thumbnail URL
   previewUrl: string | null; // YouTube Embed URL
 }
+//json response file structure 

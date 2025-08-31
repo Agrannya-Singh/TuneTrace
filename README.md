@@ -109,7 +109,7 @@ If you encounter a bug, please help us by reporting it!
 
 
 
-This project showcases my ability to architect and build a full-stack application from the ground up, integrating multiple external APIs and leveraging AI to create a dynamic and personalized user experience. 
+ 
 ---
 
 ## Contact

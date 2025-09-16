@@ -173,7 +173,7 @@ export default function TuneSwipeClient() {
         const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, songs: songTitles })
+            body: JSON.stringify({ user_id: userId.current, songs: songTitles })
         });
         
         if (!res.ok) {

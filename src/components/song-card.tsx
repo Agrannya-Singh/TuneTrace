@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Song } from '@/lib/spotify';
@@ -25,11 +26,11 @@ export function SongCard({ song, isActive }: SongCardProps) {
   }
 
   return (
-    <div
-      className="w-full h-full rounded-xl overflow-hidden shadow-2xl bg-neutral-800 flex flex-col cursor-pointer"
-      onClick={openPreview}
-    >
-      <div className="relative w-full h-4/5 group">
+    <div className="w-full h-full flex flex-col items-center">
+      <div
+        className="relative w-full h-4/5 group rounded-xl overflow-hidden shadow-2xl bg-neutral-800 cursor-pointer"
+        onClick={openPreview}
+      >
         <Image
           src={song.albumArtUrl || 'https://placehold.co/600x600.png'}
           alt={`${song.title} by ${song.artist}`}
@@ -47,7 +48,7 @@ export function SongCard({ song, isActive }: SongCardProps) {
           </div>
         </div>
       </div>
-      <div className="flex-1 p-4 text-white flex flex-col justify-center">
+      <div className="flex-1 pt-4 text-white flex flex-col justify-center items-center">
         <h2 className="text-lg font-bold font-headline truncate" title={song.title}>{song.title}</h2>
         <p className="text-sm text-neutral-300 truncate" title={song.artist}>{song.artist}</p>
       </div>

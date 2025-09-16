@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect, useCallback, createRef } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import type { TinderCardAPI } from 'react-tinder-card';
 import TinderCard from 'react-tinder-card';
 import type { Song } from '@/lib/spotify';
@@ -74,6 +75,8 @@ export default function TuneSwipeClient() {
   const [isFetchingRecommendations, setIsFetchingRecommendations] = useState(false);
 
   const { toast } = useToast();
+  
+  const userId = useRef<string | null>(null);
 
   const currentIndexRef = useRef(currentIndex);
 
@@ -160,9 +163,11 @@ export default function TuneSwipeClient() {
     setAppState('loading'); // Show loading state while getting new recommendations
 
     try {
-        // NOTE: Assuming a user_id is available. For now, using a placeholder.
-        // In a real app, this would come from an authentication context.
-        const userId = "test-user";
+        // Generate or retrieve a user ID
+        if (!userId.current) {
+          userId.current = uuidv4();
+        }
+        
         const songTitles = likedSongs.map(s => `${s.title} - ${s.artist}`);
 
         const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions`, {
@@ -178,7 +183,7 @@ export default function TuneSwipeClient() {
         
         const data = await res.json();
         
-        if (data.suggestions && data.suggestions.length > 0) {
+        if (data.suggestions && data.suggestions.length > 0) { // Assuming the response structure includes 'suggestions'
             const videoIds = data.suggestions.map((s: any) => s.youtube_video_id).join(',');
             await fetchSongs([], [], videoIds);
              toast({

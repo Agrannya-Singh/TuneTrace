@@ -48,7 +48,7 @@ export function SongCard({ song, isActive }: SongCardProps) {
           </div>
         </div>
       </div>
-      <div className="flex-1 pt-4 text-white flex flex-col justify-center items-center">
+      <div className="w-full flex-1 pt-4 text-white flex flex-col justify-center items-center bg-neutral-900 rounded-b-xl">
         <h2 className="text-lg font-bold font-headline truncate" title={song.title}>{song.title}</h2>
         <p className="text-sm text-neutral-300 truncate" title={song.artist}>{song.artist}</p>
       </div>

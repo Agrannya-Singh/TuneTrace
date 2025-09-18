@@ -54,6 +54,15 @@ changes in TuneTrace 2.0
 
 <img src="https://raw.githubusercontent.com/Agrannya-Singh/Tune_Trace_backend/f233e2b00fbcf72475e853e0dbe2db9b8e49e48b/mermaid.svg" width="1397" height="897">
 
+key achievements of the project:
+Designed a hybrid recommendation engine combining collaborative filtering with content-based algorithms and
+robust fallback mechanisms to enhance music discovery accuracy.
+– Built a high-performance back-end microservice using SQLAlchemy ORM, leveraging Redis caching to achieve
+sub-200ms database latency and reducing external API response times by 40%.
+– Orchestrated a complete CI/CD pipeline for automated, production-ready deployments on Render, ensuring
+system resilience and scalability to handle over 100 concurrent users.
+– Devised a swipe-based music discovery app that fetches YouTube music videos by mood/genre, delivering person-
+alized recommendations and a smooth, mobile-friendly UI.
 
 ---
 

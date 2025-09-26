@@ -4,7 +4,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import type { Song } from '@/lib/spotify';
 import { parse } from 'iso8601-duration';
 
-const { YOUTUBE_API_KEY } = process.env;
+const { NEXT_PUBLIC_YOUTUBE_API_KEY: YOUTUBE_API_KEY } = process.env;
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
 
 // Helper function to convert ISO 8601 duration to seconds

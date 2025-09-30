@@ -477,10 +477,10 @@ export default function TuneSwipeClient() {
 
   return (
     <div className="bg-background w-screen h-screen overflow-hidden flex flex-col items-center justify-center p-4 relative">
-      <div className="absolute top-4 right-4 z-10">
+      {renderContent()}
+      <div className="absolute bottom-4 z-10">
         <AuthButton />
       </div>
-      {renderContent()}
     </div>
   );
 }

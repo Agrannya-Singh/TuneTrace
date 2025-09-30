@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect, useCallback, createRef } from 'react';
+import { useState, useRef, useEffect, useCallback, createRef } from 'react';
+import { useSession } from 'next-auth/react';
 import { v4 as uuidv4 } from 'uuid';
-import type { TinderCardAPI } from 'react-tinder-card';
 import TinderCard from 'react-tinder-card';
 import type { Song } from '@/lib/spotify';
 import { SongCard } from './song-card';
@@ -25,11 +25,17 @@ import {
   AlertTitle,
 } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import AuthButton from './auth-button';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 
 
 type AppState = 'moodSelection' | 'loading' | 'ready' | 'outOfCards' | 'error';
+
+type TinderCardAPI = {
+  swipe: (dir: 'left' | 'right' | 'up' | 'down') => Promise<void>;
+  restoreCard: () => Promise<void>;
+};
 
 const genres = ['Rap', 'Hip Hop', 'Pop', 'Rock', 'Indie', 'Electronic', 'R&B', 'Country', 'Alternative', 'Metal', 'Folk'];
 const moods = ['Chill', 'Upbeat', 'Workout', 'Party', 'Sad', 'Focus', 'Romantic', 'Energetic'];
@@ -64,6 +70,7 @@ async function logRecommendationError(error: any, context: string) {
  * @returns The rendered music discovery UI as a React component.
  */
 export default function TuneSwipeClient() {
+  const { data: session } = useSession();
   const [appState, setAppState] = useState<AppState>('moodSelection');
   const [songs, setSongs] = useState<Song[]>([]);
   const [likedSongs, setLikedSongs] = useState<Song[]>([]);
@@ -163,17 +170,31 @@ export default function TuneSwipeClient() {
     setAppState('loading'); // Show loading state while getting new recommendations
 
     try {
-        // Generate or retrieve a user ID
-        if (!userId.current) {
-          userId.current = uuidv4();
+        const user = session?.user;
+        const accessToken = (session as any)?.accessToken;
+
+        if (!user) {
+          // If the user is not authenticated, we can fall back to the old behavior
+          // or simply not fetch recommendations. For now, we'll just return.
+          console.log("User not authenticated, skipping recommendations.");
+          setAppState('outOfCards');
+          return;
         }
-        
+
         const songTitles = likedSongs.map(s => `${s.title} - ${s.artist}`);
+
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+
+        if (accessToken) {
+          headers['Authorization'] = `Bearer ${accessToken}`;
+        }
 
         const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId.current, songs: songTitles })
+            headers: headers,
+            body: JSON.stringify({ user_id: user.email, songs: songTitles })
         });
         
         if (!res.ok) {
@@ -246,7 +267,7 @@ export default function TuneSwipeClient() {
 
   const canSwipe = appState === 'ready' && currentIndex >= 0 && currentIndex < songs.length;
 
-  const swiped = (direction: 'left' | 'right', song: Song, index: number) => {
+  const swiped = (direction: 'left' | 'right' | 'up' | 'down', song: Song, index: number) => {
     if (direction === 'right') {
       setLikedSongs((prev) => [...prev, song]);
     }
@@ -455,7 +476,10 @@ export default function TuneSwipeClient() {
   };
 
   return (
-    <div className="bg-background w-screen h-screen overflow-hidden flex flex-col items-center justify-center p-4">
+    <div className="bg-background w-screen h-screen overflow-hidden flex flex-col items-center justify-center p-4 relative">
+      <div className="absolute top-4 right-4 z-10">
+        <AuthButton />
+      </div>
       {renderContent()}
     </div>
   );

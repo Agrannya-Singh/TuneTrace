@@ -1,13 +1,14 @@
 import NextAuth from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
+import Google from "next-auth/providers/google"; // Updated for v5
 
+const authOptions = {
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID as string, // Or use AUTH_GOOGLE_ID for v5 auto-inference
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string, // Or use AUTH_GOOGLE_SECRET
       authorization: {
         params: {
-          prompt: "consent", // Add prompt and access_type back
+          prompt: "consent",
           access_type: "offline",
           response_type: "code",
           scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/youtube.force-ssl",
@@ -15,7 +16,7 @@ import GoogleProvider from "next-auth/providers/google";
       },
     }),
   ],
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET, // Or AUTH_SECRET for v5
   callbacks: {
     async jwt({ token, account }: { token: any; account: any }) {
       if (account) {
@@ -28,13 +29,11 @@ import GoogleProvider from "next-auth/providers/google";
       return session;
     },
   },
-  // Add pages configuration for error handling
   pages: {
-    error: '/api/auth/error', // Specify the error page route
+    error: '/auth/error', // Fixed to a client-side route
   },
-});
-// Use NextAuth with the defined options to create handlers
+};
+
 const handler = NextAuth(authOptions);
 
-// Correct export for Next.js App Router
 export { handler as GET, handler as POST };

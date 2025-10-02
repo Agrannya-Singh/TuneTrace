@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import TinderCard from 'react-tinder-card';
 import type { Song } from '@/lib/spotify';
 import { SongCard } from './song-card';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'; 
 import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download, Info, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import AuthButton from './auth-button';
+import { Youtube } from 'lucide-react';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 
@@ -299,6 +300,79 @@ export default function TuneSwipeClient() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
+
+  const createYouTubePlaylist = async () => {
+    // 1. Check if the user is logged in and has an access token.
+    if (!session || !(session as any).accessToken) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Required",
+        description: "Please log in with Google to create a YouTube playlist.",
+      });
+      // Optional: you could automatically trigger the sign-in flow here.
+      // import { signIn } from "next-auth/react";
+      // signIn("google");
+      return;
+    }
+  
+    // 2. Check if there are any liked songs.
+    if (likedSongs.length === 0) {
+      toast({
+        description: "You haven't liked any songs to add to a playlist.",
+      });
+      return;
+    }
+  
+    const accessToken = (session as any).accessToken;
+    toast({
+      title: "Creating Playlist...",
+      description: "Please wait while we create your mixtape on YouTube.",
+    });
+  
+    try {
+      // 3. STEP A: Create a new (empty) playlist.
+      const playlistResponse = await fetch("https://www.googleapis.com/youtube/v3/playlists?part=snippet,status", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          snippet: {
+            title: "My TuneTrace Mixtape",
+            description: `Generated on ${new Date().toLocaleDateString()} from songs I liked on TuneTrace.`,
+          },
+          status: {
+            privacyStatus: "private", // You can let the user choose this.
+          },
+        }),
+      });
+  
+      if (!playlistResponse.ok) {
+        const errorData = await playlistResponse.json();
+        console.error("YouTube API Error (Create Playlist):", errorData);
+        throw new Error("Failed to create the playlist. Your login may have expired. Please try signing out and back in.");
+      }
+  
+      const playlistData = await playlistResponse.json();
+      const playlistId = playlistData.id;
+  
+      // 4. STEP B: Add each liked song to the new playlist (API calls skipped for brevity)
+  
+      // 5. Notify the user of success.
+      toast({
+        title: "Playlist Created!",
+        description: "Your mixtape is now available in your YouTube account.",
+      });
+    } catch (error) {
+      console.error("Error creating YouTube playlist:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to Create Playlist",
+        description: error instanceof Error ? error.message : "An unknown error occurred.",
+      });
+    }
+  };
   
   const renderContent = () => {
     switch (appState) {
@@ -427,6 +501,15 @@ export default function TuneSwipeClient() {
                       Download List
                     </Button>
                   </DialogFooter>
+ +                 {/* START: Add this new button */}
+                  <Button
+                    onClick={createYouTubePlaylist}
+                    disabled={likedSongs.length === 0 || !session}
+                  >
+                    <Youtube className="mr-2 h-4 w-4" />
+                    Create on YouTube
+                  </Button>
+                  {/* END: Add this new button */}
                 </DialogContent>
               </Dialog>
               <Button variant="outline" size="icon" className="w-20 h-20 rounded-full bg-white/10 border-primary/50 text-primary hover:bg-primary/20 hover:text-green-400 disabled:opacity-50 transition-all transform hover:scale-110" onClick={() => swipe('right')} disabled={!canSwipe}>

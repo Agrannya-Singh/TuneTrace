@@ -14,3 +14,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
 });
+
+// Correct export for Next.js App Router
+export const GET = handlers.GET;
+export const POST = handlers.POST;

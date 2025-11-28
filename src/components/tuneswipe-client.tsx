@@ -206,7 +206,7 @@ export default function TuneSwipeClient() {
         const data = await res.json();
         
         if (data.suggestions && data.suggestions.length > 0) { // Assuming the response structure includes 'suggestions'
-            const videoIds = data.suggestions.map((s: any) => s.youtube_video_id).join(',');
+            const videoIds = data.suggestions.map((s: any) => s.video_id).join(',');
             await fetchSongs([], [], videoIds);
              toast({
                 title: "Here are some new tracks!",

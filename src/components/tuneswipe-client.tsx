@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import AuthButton from './auth-button';
-import { Youtube } from 'lucide-react';
+
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 
@@ -310,89 +310,6 @@ export default function TuneSwipeClient() {
     a.href = url;
     a.download = 'tunetrace-liked-songs.txt';
     document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const createYouTubePlaylist = async () => {
-    // 1. Check if the user is logged in and has an access token.
-    if (!session || !(session as any).accessToken) {
-      toast({
-        variant: "destructive",
-        title: "Authentication Required",
-        description: "Please log in with Google to create a YouTube playlist.",
-      });
-      // Optional: you could automatically trigger the sign-in flow here.
-      // import { signIn } from "next-auth/react";
-      // signIn("google");
-      return;
-    }
-
-    // 2. Check if there are any liked songs.
-    if (likedSongs.length === 0) {
-      toast({
-        description: "You haven't liked any songs to add to a playlist.",
-      });
-      return;
-    }
-
-    const accessToken = (session as any).accessToken;
-    toast({
-      title: "Creating Playlist...",
-      description: "Please wait while we create your mixtape on YouTube.",
-    });
-
-    try {
-      // 3. STEP A: Create a new (empty) playlist.
-      const playlistResponse = await fetch("https://www.googleapis.com/youtube/v3/playlists?part=snippet,status", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          snippet: {
-            title: "My TuneTrace Mixtape",
-            description: `Generated on ${new Date().toLocaleDateString()} from songs I liked on TuneTrace.`,
-          },
-          status: {
-            privacyStatus: "private", // You can let the user choose this.
-          },
-        }),
-      });
-
-      if (!playlistResponse.ok) {
-        const errorData = await playlistResponse.json();
-        console.error("YouTube API Error (Create Playlist):", errorData);
-        throw new Error("Failed to create the playlist. Your login may have expired. Please try signing out and back in.");
-      }
-
-      const playlistData = await playlistResponse.json();
-      const playlistId = playlistData.id;
-
-      // 4. STEP B: Add each liked song to the new playlist (API calls skipped for brevity)
-
-      // 5. Notify the user of success.
-      toast({
-        title: "Playlist Created!",
-        description: "Your mixtape is now available in your YouTube account.",
-      });
-    } catch (error) {
-      console.error("Error creating YouTube playlist:", error);
-      toast({
-        variant: "destructive",
-        title: "Failed to Create Playlist",
-        description: error instanceof Error ? error.message : "An unknown error occurred.",
-      });
-    }
-  };
-
-  const renderContent = () => {
-    switch (appState) {
-      case 'moodSelection':
-        return (
-          <Card className="w-full max-w-lg">
             <CardHeader>
               <CardTitle className="text-2xl">Find Your Vibe</CardTitle>
               <CardDescription>
@@ -447,137 +364,130 @@ export default function TuneSwipeClient() {
                 </Button>
               </form>
             </CardContent>
-          </Card>
+          </Card >
         );
       case 'loading':
-        return (
-          <div className="text-center flex flex-col items-center justify-center h-full text-white">
-            <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
-            <p className="text-xl">Finding some bangers for you...</p>
-          </div>
-        );
-      case 'ready':
-        return (
-          <div className="flex flex-col items-center justify-center w-full h-full">
-            <div className="w-full max-w-sm h-[60vh] md:max-w-md md:h-[65vh] relative">
-              {songs.length > 0 && childRefs.length > 0 ? (
-                songs.map((song, index) => (
-                  <TinderCard
-                    ref={childRefs[index]}
-                    className="absolute inset-0"
-                    key={`${song.id}-${index}`}
-                    onSwipe={(dir) => swiped(dir, song, index)}
-                    onCardLeftScreen={() => outOfFrame(song.id, index)}
-                    preventSwipe={['up', 'down']}
-                  >
-                    <SongCard
-                      song={song}
-                      isActive={index === currentIndex}
-                    />
-                  </TinderCard>
-                ))
-              ) : null}
-            </div>
-
-            <div className="flex items-center gap-8 mt-8">
-              <Button variant="outline" size="icon" className="w-20 h-20 rounded-full bg-white/10 border-red-500/50 text-red-500 hover:bg-red-500/20 hover:text-red-400 disabled:opacity-50 transition-all transform hover:scale-110" onClick={() => swipe('left')} disabled={!canSwipe}>
-                <X className="h-10 w-10" />
-              </Button>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="icon" className="w-16 h-16 rounded-full bg-white/10 border-blue-500/50 text-blue-500 hover:bg-blue-500/20 hover:text-blue-400 disabled:opacity-50 transition-all">
-                    <ListMusic className="h-8 w-8" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>Liked Songs</DialogTitle>
-                    <DialogDescription>
-                      Here are the songs you've liked. You can download this list as a text file.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <ScrollArea className="h-72 w-full rounded-md border p-4">
-                    {likedSongs.length > 0 ? (
-                      <ul className="space-y-2">
-                        {likedSongs.map((song) => (
-                          <li key={song.id} className="text-sm">
-                            {song.title} - <span className="text-muted-foreground">{song.artist}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center">You haven't liked any songs yet.</p>
-                    )}
-                  </ScrollArea>
-                  <DialogFooter>
-                    <Button onClick={downloadLikedSongs} disabled={likedSongs.length === 0}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download List
-                    </Button>
-                  </DialogFooter>
-                  +                 {/* START: Add this new button */}
-                  <Button
-                    onClick={createYouTubePlaylist}
-                    disabled={likedSongs.length === 0 || !session}
-                  >
-                    <Youtube className="mr-2 h-4 w-4" />
-                    Create on YouTube
-                  </Button>
-                  {/* END: Add this new button */}
-                </DialogContent>
-              </Dialog>
-              <Button variant="outline" size="icon" className="w-20 h-20 rounded-full bg-white/10 border-primary/50 text-primary hover:bg-primary/20 hover:text-green-400 disabled:opacity-50 transition-all transform hover:scale-110" onClick={() => swipe('right')} disabled={!canSwipe}>
-                <Heart className="h-10 w-10" />
-              </Button>
-            </div>
-            {isFetchingRecommendations && (
-              <div className="flex items-center text-sm text-muted-foreground mt-4">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                <span>Getting new recommendations...</span>
-              </div>
-            )}
-            <Button variant="link" className="mt-4 text-muted-foreground" onClick={handleRestart}>
-              New Search
-            </Button>
-          </div>
-        );
-      case 'outOfCards':
-        return (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900/80 rounded-xl text-white text-center p-8">
-            <Music className="h-16 w-16 mb-4 text-primary" />
-            <h2 className="text-2xl font-bold">You've reached the end!</h2>
-            <p className="text-neutral-300 mb-4">You've swiped through all the tracks for this vibe.</p>
-            <Button onClick={handleRestart}>
-              <RotateCw className="mr-2" />
-              Start New Search
-            </Button>
-          </div>
-        );
-      case 'error':
-        return (
-          <div className="text-center flex flex-col items-center justify-center h-full text-white p-4">
-            <Alert variant="destructive" className="max-w-md">
-              <Info className="h-4 w-4" />
-              <AlertTitle>Oops, something went wrong.</AlertTitle>
-              <AlertDescription>
-                We couldn't load songs from YouTube. This might be a temporary issue or a problem with the API configuration.
-              </AlertDescription>
-            </Alert>
-            <Button onClick={handleRestart} className="mt-4">
-              <RotateCw className="mr-2" />
-              Try Again
-            </Button>
-          </div>
-        );
-    }
-  };
-
   return (
-    <div className="bg-background w-screen h-screen overflow-hidden flex flex-col items-center justify-center p-4 relative">
-      {renderContent()}
-      <div className="absolute bottom-4 z-10">
-        <AuthButton />
-      </div>
+    <div className="text-center flex flex-col items-center justify-center h-full text-white">
+      <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
+      <p className="text-xl">Finding some bangers for you...</p>
     </div>
   );
+      case 'ready':
+  return (
+    <div className="flex flex-col items-center justify-center w-full h-full">
+      <div className="w-full max-w-sm h-[60vh] md:max-w-md md:h-[65vh] relative">
+        {songs.length > 0 && childRefs.length > 0 ? (
+          songs.map((song, index) => (
+            <TinderCard
+              ref={childRefs[index]}
+              className="absolute inset-0"
+              key={`${song.id}-${index}`}
+              onSwipe={(dir) => swiped(dir, song, index)}
+              onCardLeftScreen={() => outOfFrame(song.id, index)}
+              preventSwipe={['up', 'down']}
+            >
+              <SongCard
+                song={song}
+                isActive={index === currentIndex}
+              />
+            </TinderCard>
+          ))
+        ) : null}
+      </div>
+
+      <div className="flex items-center gap-8 mt-8">
+        <Button variant="outline" size="icon" className="w-20 h-20 rounded-full bg-white/10 border-red-500/50 text-red-500 hover:bg-red-500/20 hover:text-red-400 disabled:opacity-50 transition-all transform hover:scale-110" onClick={() => swipe('left')} disabled={!canSwipe}>
+          <X className="h-10 w-10" />
+        </Button>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="icon" className="w-16 h-16 rounded-full bg-white/10 border-blue-500/50 text-blue-500 hover:bg-blue-500/20 hover:text-blue-400 disabled:opacity-50 transition-all">
+              <ListMusic className="h-8 w-8" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Liked Songs</DialogTitle>
+              <DialogDescription>
+                Here are the songs you've liked. You can download this list as a text file.
+              </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="h-72 w-full rounded-md border p-4">
+              {likedSongs.length > 0 ? (
+                <ul className="space-y-2">
+                  {likedSongs.map((song) => (
+                    <li key={song.id} className="text-sm">
+                      {song.title} - <span className="text-muted-foreground">{song.artist}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center">You haven't liked any songs yet.</p>
+              )}
+            </ScrollArea>
+            <DialogFooter>
+              <Button onClick={downloadLikedSongs} disabled={likedSongs.length === 0}>
+                <Download className="mr-2 h-4 w-4" />
+                Download List
+              </Button>
+            </DialogFooter>
+            +                 {/* START: Add this new button */}
+
+          </DialogContent>
+        </Dialog>
+        <Button variant="outline" size="icon" className="w-20 h-20 rounded-full bg-white/10 border-primary/50 text-primary hover:bg-primary/20 hover:text-green-400 disabled:opacity-50 transition-all transform hover:scale-110" onClick={() => swipe('right')} disabled={!canSwipe}>
+          <Heart className="h-10 w-10" />
+        </Button>
+      </div>
+      {isFetchingRecommendations && (
+        <div className="flex items-center text-sm text-muted-foreground mt-4">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <span>Getting new recommendations...</span>
+        </div>
+      )}
+      <Button variant="link" className="mt-4 text-muted-foreground" onClick={handleRestart}>
+        New Search
+      </Button>
+    </div>
+  );
+      case 'outOfCards':
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900/80 rounded-xl text-white text-center p-8">
+      <Music className="h-16 w-16 mb-4 text-primary" />
+      <h2 className="text-2xl font-bold">You've reached the end!</h2>
+      <p className="text-neutral-300 mb-4">You've swiped through all the tracks for this vibe.</p>
+      <Button onClick={handleRestart}>
+        <RotateCw className="mr-2" />
+        Start New Search
+      </Button>
+    </div>
+  );
+      case 'error':
+  return (
+    <div className="text-center flex flex-col items-center justify-center h-full text-white p-4">
+      <Alert variant="destructive" className="max-w-md">
+        <Info className="h-4 w-4" />
+        <AlertTitle>Oops, something went wrong.</AlertTitle>
+        <AlertDescription>
+          We couldn't load songs from YouTube. This might be a temporary issue or a problem with the API configuration.
+        </AlertDescription>
+      </Alert>
+      <Button onClick={handleRestart} className="mt-4">
+        <RotateCw className="mr-2" />
+        Try Again
+      </Button>
+    </div>
+  );
+}
+  };
+
+return (
+  <div className="bg-background w-screen h-screen overflow-hidden flex flex-col items-center justify-center p-4 relative">
+    {renderContent()}
+    <div className="absolute bottom-4 z-10">
+      <AuthButton />
+    </div>
+  </div>
+);
 }

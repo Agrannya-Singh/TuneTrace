@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google"; // Updated for v5
 
-const authOptions = {
+export const authOptions = {
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID as string, // Or use AUTH_GOOGLE_ID for v5 auto-inference
@@ -11,7 +11,7 @@ const authOptions = {
           prompt: "consent",
           access_type: "offline",
           response_type: "code",
-          scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/youtube.force-ssl",
+          scope: "openid https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email",
         },
       },
     }),

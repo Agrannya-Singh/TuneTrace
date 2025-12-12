@@ -1,61 +1,47 @@
-# Authentication Setup (OAuth 2.0 with Google)
+# Authentication Setup (Firebase with Google)
 
-This document outlines the authentication setup for the application, which uses NextAuth.js to handle OAuth 2.0 with Google as the identity provider.
+This document outlines the authentication setup for the application, which uses Firebase to handle OAuth with Google as the identity provider.
 
 ## Overview
 
 - **Framework**: Next.js
-- **Library**: `next-auth`
+- **Service**: Firebase Authentication
 - **Provider**: Google
-- **Strategy**: JWT (JSON Web Tokens)
 
-The authentication flow is handled by a dynamic API route located at `src/app/api/auth/[...nextauth]/route.ts`. This route is configured to use the Google provider with credentials specified in the environment variables.
+The authentication flow is managed using the Firebase SDK. The core configuration is located in `src/lib/firebase.ts`, which initializes the Firebase app.
 
-The application is wrapped with a `SessionProvider` in `src/app/layout.tsx` to make the user session available globally. UI components like `src/components/auth-button.tsx` use the `useSession` hook to display the user's authentication state and provide sign-in/sign-out functionality.
+The application is wrapped with an `AuthProvider` in `src/app/context/providers.tsx`, which uses `src/app/context/AuthContext.tsx` to make the user's authentication state available globally. UI components like `src/components/auth-button.tsx` use the `useAuth` hook to display the user's authentication state and provide sign-in/sign-out functionality.
 
-## Google Cloud Console Setup
+## Firebase Console Setup
 
-To enable Google login, you must configure an OAuth 2.0 Client ID in the Google Cloud Platform (GCP) Console.
+To enable Google login, you must configure Firebase Authentication in the Firebase Console.
 
-1.  **Create a new GCP Project** (or use an existing one) at [console.cloud.google.com](https://console.cloud.google.com/).
+1.  **Create a new Firebase Project** (or use an existing one) at [console.firebase.google.com](https://console.firebase.google.com/).
 
-2.  **Enable the Google People API**:
-    -   Navigate to "APIs & Services" > "Library".
-    -   Search for "Google People API" and enable it for your project.
+2.  **Add a Web App**: 
+    - In your project, click the web icon (`</>`) to add a new web application.
+    - Register your app and copy the `firebaseConfig` object. This will be used in your environment variables.
 
-3.  **Configure the OAuth Consent Screen**:
-    -   Navigate to "APIs & Services" > "OAuth consent screen".
-    -   Choose "External" for the User Type.
-    -   Fill in the required application details (app name, user support email, developer contact information).
-    -   You can skip the "Scopes" section for now.
-    -   Add your email to the "Test users" section during development.
+3.  **Enable Google Sign-In**:
+    -   Navigate to "Authentication" > "Sign-in method".
+    -   Select "Google" from the list of providers and enable it.
+    -   Provide a project support email.
 
-4.  **Create OAuth 2.0 Client ID**:
-    -   Navigate to "APIs & Services" > "Credentials".
-    -   Click "+ CREATE CREDENTIALS" and select "OAuth client ID".
-    -   Select "Web application" as the application type.
-    -   Under "Authorized redirect URIs", you **must** add the callback URLs for all your environments. The path is always `/api/auth/callback/google`.
-        -   **Local Development**: `http://localhost:3000/api/auth/callback/google`
-        -   **Vercel**: `https://tune-trace-rubp.vercel.app/api/auth/callback/google`
-        -   **Render**: `https://tunetrace.onrender.com/api/auth/callback/google`
-
-5.  **Get Credentials**:
-    -   After creating the client ID, you will be given a **Client ID** and a **Client Secret**. These are the values you will use for the environment variables.
+4.  **Add Authorized Domains**:
+    -   Under the "Authentication" > "Settings" > "Authorized domains" tab, ensure your deployment domains are listed (e.g., `localhost`, your Vercel URL, your Render URL).
 
 ## Environment Variables
 
-Create a `.env.local` file in the project root and add the following variables. You will also need to set these in your deployment environments (Vercel, Render, etc.).
+Create a `.env.local` file in the project root and add the following variables using the values from your Firebase project's web app configuration.
 
 ```
-# From Google Cloud Console
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-
-# A random string used to hash tokens. Generate with `openssl rand -base64 32`
-NEXTAUTH_SECRET=your-secret-key
-
-# The canonical URL of your application for the environment
-NEXTAUTH_URL=http://localhost:3000
+# From Firebase Console > Project Settings > Your Apps > Web App
+NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-auth-domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-storage-bucket
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
+NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
 ```
 
-**Note**: The `NEXTAUTH_URL` must be set to the correct URL for each respective environment.
+**Note**: These variables must be prefixed with `NEXT_PUBLIC_` to be accessible on the client side in Next.js.

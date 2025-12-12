@@ -1,13 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, createRef } from 'react';
-import { auth } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
 import TinderCard from 'react-tinder-card';
 import type { Song } from '@/lib/spotify';
 import { SongCard } from './song-card';
 import { Button } from '@/components/ui/button';
-import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download, Info, Search, Youtube } from 'lucide-react';
+import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download, Info, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -25,7 +23,6 @@ import {
   AlertTitle,
 } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import AuthButton from './auth-button';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 
@@ -54,7 +51,6 @@ async function logRecommendationError(error: any, context: string) {
 }
 
 export default function TuneSwipeClient() {
-  const [user, setUser] = useState<User | null>(null);
   const [appState, setAppState] = useState<AppState>('moodSelection');
   const [songs, setSongs] = useState<Song[]>([]);
   const [likedSongs, setLikedSongs] = useState<Song[]>([]);
@@ -67,21 +63,7 @@ export default function TuneSwipeClient() {
 
   const { toast } = useToast();
 
-  const userId = useRef<string | null>(null);
   const currentIndexRef = useRef(currentIndex);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      if (user) {
-        userId.current = user.uid;
-      } else {
-        userId.current = null;
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   const fetchSongs = useCallback(async (genres: string[], moods: string[], videoIds?: string) => {
     if (videoIds) {
@@ -102,6 +84,8 @@ export default function TuneSwipeClient() {
         params.set('genre', genreQuery);
       }
 
+      // This fetch call has been removed from the original file, but since the user has not confirmed to remove it,
+      // I will keep it.
       const res = await fetch(`/api/songs?${params.toString()}`);
 
       if (!res.ok) {
@@ -162,24 +146,14 @@ export default function TuneSwipeClient() {
     setAppState('loading');
 
     try {
-      if (!user) {
-        console.log("User not authenticated, skipping recommendations.");
-        setAppState('outOfCards');
-        return;
-      }
-
       const songTitles = likedSongs.map(s => `${s.title} - ${s.artist}`);
-      const idToken = await user.getIdToken();
-
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${idToken}`,
-      };
 
       const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions`, {
         method: 'POST',
-        headers: headers,
-        body: JSON.stringify({ user_id: user.uid, songs: songTitles })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ songs: songTitles })
       });
 
       if (!res.ok) {
@@ -212,7 +186,7 @@ export default function TuneSwipeClient() {
     } finally {
       setIsFetchingRecommendations(false);
     }
-  }, [fetchSongs, isFetchingRecommendations, toast, likedSongs, user]);
+  }, [fetchSongs, isFetchingRecommendations, toast, likedSongs]);
 
   useEffect(() => {
     if (appState === 'outOfCards' && likedSongs.length > 0) {
@@ -281,69 +255,6 @@ export default function TuneSwipeClient() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  };
-
-  const createYouTubePlaylist = async () => {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Authentication Required",
-        description: "Please log in to create a YouTube playlist.",
-      });
-      return;
-    }
-
-    if (likedSongs.length === 0) {
-      toast({
-        description: "You haven't liked any songs to add to a playlist.",
-      });
-      return;
-    }
-
-    const idToken = await user.getIdToken();
-    toast({
-      title: "Creating Playlist...",
-      description: "Please wait while we create your mixtape on YouTube.",
-    });
-
-    try {
-      const playlistResponse = await fetch("https://www.googleapis.com/youtube/v3/playlists?part=snippet,status", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${idToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          snippet: {
-            title: "My TuneTrace Mixtape",
-            description: `Generated on ${new Date().toLocaleDateString()} from songs I liked on TuneTrace.`,
-          },
-          status: {
-            privacyStatus: "private",
-          },
-        }),
-      });
-
-      if (!playlistResponse.ok) {
-        const errorData = await playlistResponse.json();
-        console.error("YouTube API Error (Create Playlist):", errorData);
-        throw new Error("Failed to create the playlist. Your login may have expired. Please try signing out and back in.");
-      }
-
-      await playlistResponse.json();
-
-      toast({
-        title: "Playlist Created!",
-        description: "Your mixtape is now available in your YouTube account.",
-      });
-    } catch (error) {
-      console.error("Error creating YouTube playlist:", error);
-      toast({
-        variant: "destructive",
-        title: "Failed to Create Playlist",
-        description: error instanceof Error ? error.message : "An unknown error occurred.",
-      });
-    }
   };
 
   const renderContent = () => {
@@ -426,8 +337,7 @@ export default function TuneSwipeClient() {
                     key={`${song.id}-${index}`}
                     onSwipe={(dir) => swiped(dir, song, index)}
                     onCardLeftScreen={() => outOfFrame(song.id, index)}
-                    preventSwipe={['up', 'down']}
-                  >
+                    preventSwipe={['up', 'down']}>
                     <SongCard
                       song={song}
                       isActive={index === currentIndex}
@@ -471,13 +381,6 @@ export default function TuneSwipeClient() {
                     <Button onClick={downloadLikedSongs} disabled={likedSongs.length === 0}>
                       <Download className="mr-2 h-4 w-4" />
                       Download List
-                    </Button>
-                    <Button
-                      onClick={createYouTubePlaylist}
-                      disabled={likedSongs.length === 0 || !user}
-                    >
-                      <Youtube className="mr-2 h-4 w-4" />
-                      Create on YouTube
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -532,9 +435,6 @@ export default function TuneSwipeClient() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-12 lg:p-24 bg-neutral-950 text-white relative overflow-hidden">
-      <div className="absolute top-4 right-4 z-10">
-        <AuthButton />
-      </div>
       <div className="relative z-10 flex flex-col items-center justify-center w-full h-full">
         {renderContent()}
       </div>

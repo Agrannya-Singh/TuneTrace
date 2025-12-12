@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, createRef } from 'react';
 import TinderCard from 'react-tinder-card';
+import { getSongsByIds } from '@/lib/youtube';
 import type { Song } from '@/lib/spotify';
 import { SongCard } from './song-card';
 import { Button } from '@/components/ui/button';
@@ -186,7 +187,14 @@ export default function TuneSwipeClient() {
 
       if (data.suggestions && data.suggestions.length > 0) {
         const videoIds = data.suggestions.map((s: any) => s.youtube_video_id).join(',');
-        await fetchSongs([], [], videoIds);
+        const newSongs = await getSongsByIds(videoIds);
+        setSongs(prevSongs => {
+          const updatedSongs = [...newSongs, ...prevSongs.slice(currentIndex + 1)];
+          setChildRefs(Array(updatedSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
+          setCurrentIndex(updatedSongs.length - 1);
+          return updatedSongs;
+        });
+        setAppState('ready');
         toast({
           title: "Here are some new tracks!",
           description: "We've curated these recommendations based on your likes.",

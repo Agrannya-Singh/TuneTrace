@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, createRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { v4 as uuidv4 } from 'uuid';
 import TinderCard from 'react-tinder-card';
 import type { Song } from '@/lib/spotify';
 import { SongCard } from './song-card';
-import { Button } from '@/components/ui/button'; 
+import { Button } from '@/components/ui/button';
 import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download, Info, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -41,16 +42,8 @@ type TinderCardAPI = {
 const genres = ['Rap', 'Hip Hop', 'Pop', 'Rock', 'Indie', 'Electronic', 'R&B', 'Country', 'Alternative', 'Metal', 'Folk'];
 const moods = ['Chill', 'Upbeat', 'Workout', 'Party', 'Sad', 'Focus', 'Romantic', 'Energetic'];
 
-const SUGGESTION_SERVICE_BASE_URL = 'https://song-suggest-microservice.onrender.com'; 
+const SUGGESTION_SERVICE_BASE_URL = 'https://song-suggest-microservice.onrender.com';
 
-/**
- * Sends error details and context information to the backend logging endpoint.
- *
- * Attempts to POST the provided error and context to `/api/log`. If the logging request fails, the error is logged to the console.
- *
- * @param error - The error object or message to log
- * @param context - Additional context describing where or how the error occurred
- */
 async function logRecommendationError(error: any, context: string) {
   try {
     await fetch('/api/log', {
@@ -63,15 +56,8 @@ async function logRecommendationError(error: any, context: string) {
   }
 }
 
-/**
- * Provides a swipe-based music discovery interface where users can select genres and moods, swipe through song cards, like tracks, and receive personalized recommendations.
- *
- * Users begin by selecting genres and moods or leaving them blank to view top charts. Songs are presented as swipeable cards; swiping right adds a song to the liked list. When all cards are swiped, the component fetches new recommendations based on liked songs from an external microservice. The UI adapts to loading, error, and empty states, and users can download their liked songs or restart the discovery process at any time.
- *
- * @returns The rendered music discovery UI as a React component.
- */
 export default function TuneSwipeClient() {
-  const { data: session } = useSession();
+  const [user, setUser] = useState<User | null>(null);
   const [appState, setAppState] = useState<AppState>('moodSelection');
   const [songs, setSongs] = useState<Song[]>([]);
   const [likedSongs, setLikedSongs] = useState<Song[]>([]);
@@ -88,12 +74,25 @@ export default function TuneSwipeClient() {
 
   const currentIndexRef = useRef(currentIndex);
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      if (user) {
+        userId.current = user.uid;
+      } else {
+        userId.current = null;
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const fetchSongs = useCallback(async (genres: string[], moods: string[], videoIds?: string) => {
     if (videoIds) {
       setIsFetchingRecommendations(true);
     } else {
       setAppState('loading');
-      setLikedSongs([]); 
+      setLikedSongs([]);
     }
 
     try {
@@ -117,7 +116,6 @@ export default function TuneSwipeClient() {
         let fetchedSongs = await res.json();
         
         if (fetchedSongs.length < 20 && !videoIds) {
-            // Not a robust solution, but attempts to get more variety if the first batch is small
             const secondRes = await fetch(`/api/songs?${params.toString()}&pageToken=next`);
             if (secondRes.ok) {
                 const extraSongs = await secondRes.json();
@@ -129,7 +127,6 @@ export default function TuneSwipeClient() {
         const newSongs = fetchedSongs.filter((song: Song) => !songs.some(existing => existing.id === song.id));
         
         if (videoIds) {
-          // Add recommended songs to the front of the swipe queue
           setSongs(prevSongs => {
             const updatedSongs = [...newSongs, ...prevSongs.slice(currentIndex + 1)];
             setChildRefs(Array(updatedSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
@@ -138,7 +135,6 @@ export default function TuneSwipeClient() {
           });
           setAppState('ready');
         } else {
-          // This is a new search, so replace the song list
           setSongs(newSongs);
           setChildRefs(Array(newSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
           setCurrentIndex(newSongs.length - 1);
@@ -168,34 +164,27 @@ export default function TuneSwipeClient() {
     if (isFetchingRecommendations || likedSongs.length === 0) return;
     
     setIsFetchingRecommendations(true);
-    setAppState('loading'); // Show loading state while getting new recommendations
+    setAppState('loading');
 
     try {
-        const user = session?.user;
-        const accessToken = (session as any)?.accessToken;
-
         if (!user) {
-          // If the user is not authenticated, we can fall back to the old behavior
-          // or simply not fetch recommendations. For now, we'll just return.
           console.log("User not authenticated, skipping recommendations.");
           setAppState('outOfCards');
           return;
         }
 
         const songTitles = likedSongs.map(s => `${s.title} - ${s.artist}`);
+        const idToken = await user.getIdToken();
 
         const headers: HeadersInit = {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
         };
-
-        if (accessToken) {
-          headers['Authorization'] = `Bearer ${accessToken}`;
-        }
 
         const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions`, {
             method: 'POST',
             headers: headers,
-            body: JSON.stringify({ user_id: user.email, songs: songTitles })
+            body: JSON.stringify({ user_id: user.uid, songs: songTitles })
         });
         
         if (!res.ok) {
@@ -205,7 +194,7 @@ export default function TuneSwipeClient() {
         
         const data = await res.json();
         
-        if (data.suggestions && data.suggestions.length > 0) { // Assuming the response structure includes 'suggestions'
+        if (data.suggestions && data.suggestions.length > 0) { 
             const videoIds = data.suggestions.map((s: any) => s.youtube_video_id).join(',');
             await fetchSongs([], [], videoIds);
              toast({
@@ -213,7 +202,7 @@ export default function TuneSwipeClient() {
                 description: "We've curated these recommendations based on your likes.",
             });
         } else {
-             setAppState('outOfCards'); // No more recommendations to show
+             setAppState('outOfCards');
         }
     } catch(e) {
       console.error("Failed to get recommendations", e);
@@ -224,11 +213,11 @@ export default function TuneSwipeClient() {
         description: errorMessage,
       })
       await logRecommendationError(errorMessage, "getRecommendations");
-      setAppState('outOfCards'); // Fallback to out of cards state
+      setAppState('outOfCards');
     } finally {
         setIsFetchingRecommendations(false);
     }
-  }, [fetchSongs, isFetchingRecommendations, toast, likedSongs]);
+  }, [fetchSongs, isFetchingRecommendations, toast, likedSongs, user]);
 
 
   useEffect(() => {
@@ -276,7 +265,6 @@ export default function TuneSwipeClient() {
   };
 
   const outOfFrame = (songId: string, idx: number) => {
-    // Check if the card that went out of frame was the last one
     if (currentIndexRef.current < 0) {
       setAppState('outOfCards');
     }
@@ -302,20 +290,15 @@ export default function TuneSwipeClient() {
   };
 
   const createYouTubePlaylist = async () => {
-    // 1. Check if the user is logged in and has an access token.
-    if (!session || !(session as any).accessToken) {
+    if (!user) {
       toast({
         variant: "destructive",
         title: "Authentication Required",
-        description: "Please log in with Google to create a YouTube playlist.",
+        description: "Please log in to create a YouTube playlist.",
       });
-      // Optional: you could automatically trigger the sign-in flow here.
-      // import { signIn } from "next-auth/react";
-      // signIn("google");
       return;
     }
   
-    // 2. Check if there are any liked songs.
     if (likedSongs.length === 0) {
       toast({
         description: "You haven't liked any songs to add to a playlist.",
@@ -323,18 +306,17 @@ export default function TuneSwipeClient() {
       return;
     }
   
-    const accessToken = (session as any).accessToken;
+    const idToken = await user.getIdToken();
     toast({
       title: "Creating Playlist...",
       description: "Please wait while we create your mixtape on YouTube.",
     });
   
     try {
-      // 3. STEP A: Create a new (empty) playlist.
       const playlistResponse = await fetch("https://www.googleapis.com/youtube/v3/playlists?part=snippet,status", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${accessToken}`,
+          "Authorization": `Bearer ${idToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -343,7 +325,7 @@ export default function TuneSwipeClient() {
             description: `Generated on ${new Date().toLocaleDateString()} from songs I liked on TuneTrace.`,
           },
           status: {
-            privacyStatus: "private", // You can let the user choose this.
+            privacyStatus: "private",
           },
         }),
       });
@@ -357,9 +339,6 @@ export default function TuneSwipeClient() {
       const playlistData = await playlistResponse.json();
       const playlistId = playlistData.id;
   
-      // 4. STEP B: Add each liked song to the new playlist (API calls skipped for brevity)
-  
-      // 5. Notify the user of success.
       toast({
         title: "Playlist Created!",
         description: "Your mixtape is now available in your YouTube account.",
@@ -501,15 +480,13 @@ export default function TuneSwipeClient() {
                       Download List
                     </Button>
                   </DialogFooter>
- +                 {/* START: Add this new button */}
                   <Button
                     onClick={createYouTubePlaylist}
-                    disabled={likedSongs.length === 0 || !session}
+                    disabled={likedSongs.length === 0 || !user}
                   >
                     <Youtube className="mr-2 h-4 w-4" />
                     Create on YouTube
                   </Button>
-                  {/* END: Add this new button */}
                 </DialogContent>
               </Dialog>
               <Button variant="outline" size="icon" className="w-20 h-20 rounded-full bg-white/10 border-primary/50 text-primary hover:bg-primary/20 hover:text-green-400 disabled:opacity-50 transition-all transform hover:scale-110" onClick={() => swipe('right')} disabled={!canSwipe}>
@@ -555,15 +532,19 @@ export default function TuneSwipeClient() {
             </Button>
           </div>
         );
+      default:
+        return null;
     }
   };
 
   return (
-    <div className="bg-background w-screen h-screen overflow-hidden flex flex-col items-center justify-center p-4 relative">
-      {renderContent()}
-      <div className="absolute bottom-4 z-10">
+    <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-12 lg:p-24 bg-neutral-950 text-white relative overflow-hidden">
+      <div className="absolute top-4 right-4 z-10">
         <AuthButton />
       </div>
-    </div>
+      <div className="relative z-10 flex flex-col items-center justify-center w-full h-full">
+        {renderContent()}
+      </div>
+    </main>
   );
 }

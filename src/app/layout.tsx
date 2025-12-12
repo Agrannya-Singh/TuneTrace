@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import Providers from './providers';
+import Providers from '@/app/context/providers';
 
 export const metadata: Metadata = {
   title: 'TuneTrace',

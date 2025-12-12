@@ -8,7 +8,7 @@ import TinderCard from 'react-tinder-card';
 import type { Song } from '@/lib/spotify';
 import { SongCard } from './song-card';
 import { Button } from '@/components/ui/button';
-import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download, Info, Search } from 'lucide-react';
+import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download, Info, Search, Youtube } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import AuthButton from './auth-button';
-import { Youtube } from 'lucide-react';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 
@@ -337,7 +336,6 @@ export default function TuneSwipeClient() {
       }
   
       const playlistData = await playlistResponse.json();
-      const playlistId = playlistData.id;
   
       toast({
         title: "Playlist Created!",

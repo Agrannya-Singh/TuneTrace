@@ -63,12 +63,12 @@ export default function LandingPage() {
   };
 
   const achievements = [
-    "🚀 Sub-200ms database latency with Redis caching",
-    "⚡ 40% reduction in API response times",
-    "👥 Handles 100+ concurrent users",
-    "🔄 Complete CI/CD pipeline on Render",
-    "🎵 Hybrid recommendation engine",
-    "📱 Mobile-friendly swipe interface"
+    " Sub-200ms database latency with Redis caching",
+    " 40% reduction in API response times",
+    " Handles 100+ concurrent users",
+    " Complete CI/CD pipeline on Render",
+    " Hybrid recommendation engine",
+    " Mobile-friendly swipe interface"
   ];
 
   return (
@@ -105,19 +105,19 @@ export default function LandingPage() {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-6 text-lg rounded-full shadow-lg shadow-purple-500/50 transition-all hover:shadow-xl hover:shadow-purple-500/60 hover:scale-105"
                 onClick={() => window.location.href = '/app'}
               >
                 <Zap className="mr-2 w-5 h-5" />
                 Start Swiping
               </Button>
-              
+
               <Link href="https://github.com/Agrannya-Singh/TuneTrace" target="_blank" rel="noopener noreferrer">
-                <Button 
-                  size="lg" 
-                  variant="outline" 
+                <Button
+                  size="lg"
+                  variant="outline"
                   className="border-2 border-zinc-700 hover:border-purple-500 bg-transparent hover:bg-purple-500/10 px-8 py-6 text-lg rounded-full transition-all hover:scale-105"
                 >
                   <Github className="mr-2 w-5 h-5" />
@@ -250,17 +250,17 @@ export default function LandingPage() {
             Start swiping and find your next favorite song today
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-10 py-6 text-lg rounded-full shadow-lg shadow-purple-500/50 transition-all hover:shadow-xl hover:shadow-purple-500/60 hover:scale-105"
               onClick={() => window.location.href = '/app'}
             >
               Get Started Now
             </Button>
             <Link href="https://github.com/Agrannya-Singh/TuneTrace" target="_blank" rel="noopener noreferrer">
-              <Button 
-                size="lg" 
-                variant="outline" 
+              <Button
+                size="lg"
+                variant="outline"
                 className="border-2 border-zinc-700 hover:border-purple-500 bg-transparent hover:bg-purple-500/10 px-10 py-6 text-lg rounded-full transition-all hover:scale-105"
               >
                 <Github className="mr-2 w-5 h-5" />
@@ -283,9 +283,9 @@ export default function LandingPage() {
               © 2025 TuneTrace. Built with ❤️ for music lovers
             </div>
             <div className="flex gap-4">
-              <Link 
-                href="https://github.com/Agrannya-Singh/TuneTrace" 
-                target="_blank" 
+              <Link
+                href="https://github.com/Agrannya-Singh/TuneTrace"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-zinc-400 hover:text-purple-400 transition-colors"
               >

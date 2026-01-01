@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, createRef } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/app/context/AuthContext';
-import { getSongsByIds } from '@/lib/youtube';
+// import { getSongsByIds } from '@/lib/youtube';
 import type { Song } from '@/lib/spotify';
 
 const SUGGESTION_SERVICE_BASE_URL = 'https://song-suggest-microservice.onrender.com';
@@ -192,7 +192,11 @@ export function useTuneSwipe() {
 
             if (data.suggestions && data.suggestions.length > 0) {
                 const videoIds = data.suggestions.map((s: any) => s.youtube_video_id).join(',');
-                const newSongs = await getSongsByIds(videoIds);
+
+                // Use local API to fetch YouTube details (protects API Key)
+                const ytRes = await fetch(`/api/songs?videoIds=${videoIds}`);
+                if (!ytRes.ok) throw new Error('Failed to fetch song details');
+                const newSongs: Song[] = await ytRes.json();
                 setSongs(prevSongs => {
                     const updatedSongs = [...newSongs, ...prevSongs.slice(currentIndex + 1)];
                     setChildRefs(Array(updatedSongs.length).fill(0).map(() => createRef()));

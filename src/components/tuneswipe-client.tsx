@@ -6,6 +6,7 @@ import { getSongsByIds } from '@/lib/youtube';
 import type { Song } from '@/lib/spotify';
 import { SongCard } from './song-card';
 import { Button } from '@/components/ui/button';
+import AuthButton from '@/components/auth-button';
 import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download, Info, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/app/context/AuthContext';
@@ -396,11 +397,16 @@ export default function TuneSwipeClient() {
                   <ScrollArea className="h-72 w-full rounded-md border p-4">
                     {likedSongsHistory.length > 0 ? (
                       <ul className="space-y-2">
-                        {likedSongsHistory.map((song) => (
-                          <li key={song.video_id} className="text-sm">
-                            {song.title} - <span className="text-muted-foreground">{song.artist}</span>
-                          </li>
-                        ))}
+                        {likedSongsHistory.map((song) => {
+                          const title = typeof song.title === 'string' ? song.title : 'Unknown Title';
+                          const artist = typeof song.artist === 'string' ? song.artist : 'Unknown Artist';
+                          const key = song.video_id || song.youtube_video_id || Math.random();
+                          return (
+                            <li key={key} className="text-sm">
+                              {title} - <span className="text-muted-foreground">{artist}</span>
+                            </li>
+                          );
+                        })}
                       </ul>
                     ) : (
                       <p className="text-sm text-muted-foreground text-center">You haven't liked any songs yet.</p>
@@ -465,6 +471,9 @@ export default function TuneSwipeClient() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-12 lg:p-24 bg-neutral-950 text-white relative overflow-hidden">
       <div className="relative z-10 flex flex-col items-center justify-center w-full h-full">
+        <div className="absolute top-4 right-4 z-50">
+          <AuthButton />
+        </div>
         {renderContent()}
       </div>
     </main>

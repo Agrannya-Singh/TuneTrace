@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Github, Music, Sparkles, Zap, Heart, Download, Youtube, TrendingUp, Code, Database, Cpu } from 'lucide-react';
+import AuthButton from '@/components/auth-button';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -90,6 +91,9 @@ export default function LandingPage() {
               <span className="text-sm font-medium bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                 TuneTrace 2.0
               </span>
+            </div>
+            <div className="absolute top-4 right-4 z-50">
+              <AuthButton />
             </div>
 
             {/* Main Heading */}

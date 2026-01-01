@@ -8,9 +8,14 @@ export const metadata: Metadata = {
   description: 'Discover new music with a swipe.',
 };
 
+// import { ThemeProvider } from "@/components/theme-provider"
+// We need to import dynamically or ensure it runs on client? 
+// No, next-themes handles it. 
+import { ThemeProvider } from "@/components/theme-provider"
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -24,10 +29,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="font-body antialiased">
-        <Providers>
-          {children}
-          <Toaster />
-        </Providers>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Providers>
+            {children}
+            <Toaster />
+          </Providers>
+        </ThemeProvider>
       </body>
     </html>
   );

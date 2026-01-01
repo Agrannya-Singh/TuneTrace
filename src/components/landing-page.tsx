@@ -9,7 +9,7 @@ import { Footer } from '@/components/landing/Footer';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-zinc-900 to-black text-white">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
       <HeroSection />
       <FeaturesSection />
       <TechStackSection />

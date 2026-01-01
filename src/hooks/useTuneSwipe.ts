@@ -56,8 +56,16 @@ export function useTuneSwipe() {
         }
     }, [user]);
 
-    const persistLikes = async (currentLikedSongs: Song[]) => {
-        if (!user) return;
+    const pendingLikesRef = useRef<Song[]>([]);
+    const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    const persistLikes = useCallback(async () => {
+        if (!user || pendingLikesRef.current.length === 0) return;
+
+        const songsToSave = [...pendingLikesRef.current];
+        // Clear pending immediately to avoid double sending if next debounce triggers fast
+        pendingLikesRef.current = [];
+
         try {
             await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions`, {
                 method: 'POST',
@@ -66,13 +74,26 @@ export function useTuneSwipe() {
                 },
                 body: JSON.stringify({
                     user_id: user.email,
-                    songs: currentLikedSongs.map(s => `${s.title} - ${s.artist}`),
+                    songs: songsToSave.map(s => `${s.title} - ${s.artist}`),
                     genre: selectedGenres.length > 0 ? selectedGenres.join(' ') : 'any'
                 })
             });
         } catch (e) {
             console.error("Failed to persist likes", e);
+            // On error, we might want to put them back? For now, we just log.
         }
+    }, [user, selectedGenres]);
+
+    const queueLike = (song: Song) => {
+        pendingLikesRef.current.push(song);
+
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+        }
+
+        debounceTimerRef.current = setTimeout(() => {
+            persistLikes();
+        }, 2000); // Wait 2 seconds of inactivity before sending
     };
 
     const fetchSongs = useCallback(async (genres: string[], moods: string[], videoIds?: string) => {
@@ -156,6 +177,8 @@ export function useTuneSwipe() {
         try {
             const songTitles = likedSongs.map(s => s.title);
 
+            const songFormatted = likedSongs.map(s => `${s.title} - ${s.artist}`);
+
             const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions`, {
                 method: 'POST',
                 headers: {
@@ -163,8 +186,8 @@ export function useTuneSwipe() {
                 },
                 body: JSON.stringify({
                     user_id: user?.email,
-                    songs: songTitles,
-                    genre: selectedGenres.join(' ')
+                    songs: songFormatted,
+                    genre: selectedGenres.length > 0 ? selectedGenres.join(' ') : 'any'
                 })
             });
 
@@ -245,11 +268,8 @@ export function useTuneSwipe() {
 
     const swiped = (direction: SwipeDirection, song: Song, index: number) => {
         if (direction === 'right') {
-            setLikedSongs((prev) => {
-                const newHelper = [...prev, song];
-                persistLikes(newHelper);
-                return newHelper;
-            });
+            setLikedSongs((prev) => [...prev, song]);
+            queueLike(song);
         }
         updateCurrentIndex(index - 1);
     };

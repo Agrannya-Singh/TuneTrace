@@ -1,6 +1,5 @@
 'use client';
 
-import AuthButton from '@/components/auth-button';
 import { useTuneSwipe } from '@/hooks/useTuneSwipe';
 import { MoodSelection } from '@/components/tuneswipe/MoodSelection';
 import { SwipeDeck } from '@/components/tuneswipe/SwipeDeck';
@@ -78,7 +77,7 @@ export default function TuneSwipeClient() {
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-12 lg:p-24 bg-neutral-950 text-white relative overflow-hidden">
       <div className="relative z-10 flex flex-col items-center justify-center w-full h-full">
         <div className="absolute top-4 right-4 z-50">
-          <AuthButton />
+
         </div>
         {renderContent()}
       </div>

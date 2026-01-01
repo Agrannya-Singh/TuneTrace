@@ -60,7 +60,7 @@ export function useTuneSwipe() {
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     const persistLikes = useCallback(async () => {
-        if (!user || pendingLikesRef.current.length === 0) return;
+        if (pendingLikesRef.current.length === 0) return;
 
         const songsToSave = [...pendingLikesRef.current];
         // Clear pending immediately to avoid double sending if next debounce triggers fast
@@ -73,7 +73,7 @@ export function useTuneSwipe() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    user_id: user.email,
+                    user_id: user?.email || 'anon@use.com',
                     songs: songsToSave.map(s => `${s.title} - ${s.artist}`),
                     genre: selectedGenres.length > 0 ? selectedGenres.join(' ') : 'any'
                 })

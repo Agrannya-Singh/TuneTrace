@@ -1,6 +1,6 @@
 import type { Song } from './spotify';
 
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3';
 
 async function searchYoutube(query: string, pageToken?: string): Promise<any> {
@@ -19,9 +19,7 @@ async function searchYoutube(query: string, pageToken?: string): Promise<any> {
 
   const response = await fetch(`${YOUTUBE_API_URL}/search?${params.toString()}`);
   if (!response.ok) {
-    const errorBody = await response.text();
-    console.error('YouTube API Search Error:', response.status, errorBody);
-    throw new Error(`YouTube API Search Failed: ${response.status} ${response.statusText} - ${errorBody}`);
+    throw new Error('Failed to fetch from YouTube API');
   }
   return response.json();
 }
@@ -35,9 +33,7 @@ async function getVideos(videoIds: string): Promise<any> {
 
   const response = await fetch(`${YOUTUBE_API_URL}/videos?${params.toString()}`);
   if (!response.ok) {
-    const errorBody = await response.text();
-    console.error('YouTube API Videos Error:', response.status, errorBody);
-    throw new Error(`YouTube API Videos Failed: ${response.status} ${response.statusText} - ${errorBody}`);
+    throw new Error('Failed to fetch from YouTube API');
   }
   return response.json();
 }

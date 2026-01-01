@@ -255,9 +255,34 @@ export default function TuneSwipeClient() {
 
   const canSwipe = appState === 'ready' && currentIndex >= 0 && currentIndex < songs.length;
 
+  const persistLikes = async (currentLikedSongs: Song[]) => {
+    if (!user) return;
+    try {
+      await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: user.email,
+          songs: currentLikedSongs.map(s => `${s.title} - ${s.artist}`),
+          genre: selectedGenres.length > 0 ? selectedGenres.join(' ') : 'any'
+        })
+      });
+      // We ignore the response here because we don't want to reset the deck
+      // while the user is actively swiping. We just want to save the data.
+    } catch (e) {
+      console.error("Failed to persist likes", e);
+    }
+  };
+
   const swiped = (direction: 'left' | 'right' | 'up' | 'down', song: Song, index: number) => {
     if (direction === 'right') {
-      setLikedSongs((prev) => [...prev, song]);
+      setLikedSongs((prev) => {
+        const newHelper = [...prev, song];
+        persistLikes(newHelper);
+        return newHelper;
+      });
     }
     updateCurrentIndex(index - 1);
   };

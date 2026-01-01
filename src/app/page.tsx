@@ -1,9 +1,9 @@
-import TuneSwipeClient from '@/components/tuneswipe-client';
+import LandingPage from '@/components/landing-page';
 
 export default function Home() {
   return (
     <main>
-      <TuneSwipeClient />
+      <LandingPage />
     </main>
   );
 }

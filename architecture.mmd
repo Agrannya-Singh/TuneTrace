@@ -1,0 +1,48 @@
+```mermaid
+graph TD
+    subgraph "User's Browser"
+        A[User]
+    end
+
+    subgraph "TuneTrace Frontend (Next.js)"
+        B[React Components]
+        C[Firebase Auth UI]
+        D[API Client]
+    end
+
+    subgraph "External Services"
+        E[Firebase Authentication]
+        F[YouTube API]
+    end
+
+    subgraph "TuneTrace Backend (FastAPI Microservice)"
+        G[RESTful API]
+        H[Recommendation Engine]
+        I[PostgreSQL Database]
+        J[Redis Cache]
+        K[In-Memory Cache]
+    end
+
+    A -- Interacts with --> B
+    B -- Triggers Auth --> C
+    C -- Authenticates via --> E
+
+    B -- Sends Requests via --> D
+    D -- "POST /suggestions" --> G
+    D -- "GET /liked-songs" --> G
+
+    G -- Gets Recommendations --> H
+    H -- "Primary: ML Model" --> H
+    H -- "Fallback: Collaborative Filtering" --> I
+    H -- "Final Fallback: Genre-Based" --> I
+
+    G -- Caches User Likes --> J
+    G -- Fetches Liked Songs --> I
+    G -- Stores User Data --> I
+
+    H -- Searches YouTube Videos --> K
+    K -- "Cache Miss" --> F
+    F -- Video Data --> K
+    K -- Caches Results --> K
+    K -- Video Data --> H
+```

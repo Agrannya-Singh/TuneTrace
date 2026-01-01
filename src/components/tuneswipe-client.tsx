@@ -2,11 +2,13 @@
 
 import { useState, useRef, useEffect, useCallback, createRef } from 'react';
 import TinderCard from 'react-tinder-card';
+import { getSongsByIds } from '@/lib/youtube';
 import type { Song } from '@/lib/spotify';
 import { SongCard } from './song-card';
 import { Button } from '@/components/ui/button';
 import { Heart, Loader2, RotateCw, X, Music, ListMusic, Download, Info, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/app/context/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -51,9 +53,11 @@ async function logRecommendationError(error: any, context: string) {
 }
 
 export default function TuneSwipeClient() {
+  const { user } = useAuth();
   const [appState, setAppState] = useState<AppState>('moodSelection');
   const [songs, setSongs] = useState<Song[]>([]);
   const [likedSongs, setLikedSongs] = useState<Song[]>([]);
+  const [likedSongsHistory, setLikedSongsHistory] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [childRefs, setChildRefs] = useState<React.RefObject<TinderCardAPI>[]>([]);
 
@@ -62,6 +66,20 @@ export default function TuneSwipeClient() {
   const [isFetchingRecommendations, setIsFetchingRecommendations] = useState(false);
 
   const { toast } = useToast();
+
+  const fetchLikedSongs = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/liked-songs?user_id=${user.email}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLikedSongsHistory(data);
+      }
+    } catch (error) {
+      console.error('Error fetching liked songs:', error);
+    }
+  }, [user]);
 
   const currentIndexRef = useRef(currentIndex);
 
@@ -146,14 +164,18 @@ export default function TuneSwipeClient() {
     setAppState('loading');
 
     try {
-      const songTitles = likedSongs.map(s => `${s.title} - ${s.artist}`);
+      const songTitles = likedSongs.map(s => s.title);
 
       const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ songs: songTitles })
+        body: JSON.stringify({
+          user_id: user?.email,
+          songs: songTitles,
+          genre: selectedGenres.join(' ')
+        })
       });
 
       if (!res.ok) {
@@ -165,7 +187,14 @@ export default function TuneSwipeClient() {
 
       if (data.suggestions && data.suggestions.length > 0) {
         const videoIds = data.suggestions.map((s: any) => s.youtube_video_id).join(',');
-        await fetchSongs([], [], videoIds);
+        const newSongs = await getSongsByIds(videoIds);
+        setSongs(prevSongs => {
+          const updatedSongs = [...newSongs, ...prevSongs.slice(currentIndex + 1)];
+          setChildRefs(Array(updatedSongs.length).fill(0).map(() => createRef<TinderCardAPI>()));
+          setCurrentIndex(updatedSongs.length - 1);
+          return updatedSongs;
+        });
+        setAppState('ready');
         toast({
           title: "Here are some new tracks!",
           description: "We've curated these recommendations based on your likes.",
@@ -245,7 +274,7 @@ export default function TuneSwipeClient() {
   };
 
   const downloadLikedSongs = () => {
-    const content = likedSongs.map(song => `${song.title} - ${song.artist} (https://youtube.com/watch?v=${song.id})`).join('\n');
+    const content = likedSongsHistory.map(song => `${song.title} - ${song.artist} (https://youtube.com/watch?v=${song.video_id})`).join('\n');
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -352,7 +381,7 @@ export default function TuneSwipeClient() {
                 <X className="h-10 w-10" />
               </Button>
               <Dialog>
-                <DialogTrigger asChild>
+                <DialogTrigger asChild onClick={fetchLikedSongs}>
                   <Button variant="outline" size="icon" className="w-16 h-16 rounded-full bg-white/10 border-blue-500/50 text-blue-500 hover:bg-blue-500/20 hover:text-blue-400 disabled:opacity-50 transition-all">
                     <ListMusic className="h-8 w-8" />
                   </Button>
@@ -365,10 +394,10 @@ export default function TuneSwipeClient() {
                     </DialogDescription>
                   </DialogHeader>
                   <ScrollArea className="h-72 w-full rounded-md border p-4">
-                    {likedSongs.length > 0 ? (
+                    {likedSongsHistory.length > 0 ? (
                       <ul className="space-y-2">
-                        {likedSongs.map((song) => (
-                          <li key={song.id} className="text-sm">
+                        {likedSongsHistory.map((song) => (
+                          <li key={song.video_id} className="text-sm">
                             {song.title} - <span className="text-muted-foreground">{song.artist}</span>
                           </li>
                         ))}
@@ -378,7 +407,7 @@ export default function TuneSwipeClient() {
                     )}
                   </ScrollArea>
                   <DialogFooter className="flex-col sm:flex-row gap-2">
-                    <Button onClick={downloadLikedSongs} disabled={likedSongs.length === 0}>
+                    <Button onClick={downloadLikedSongs} disabled={likedSongsHistory.length === 0}>
                       <Download className="mr-2 h-4 w-4" />
                       Download List
                     </Button>

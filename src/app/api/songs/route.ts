@@ -21,8 +21,11 @@ export async function GET(request: Request) {
 
     const songs = await getSongsByQuery(query, pageToken);
     return NextResponse.json(songs);
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Failed to fetch songs' }, { status: 500 });
+  } catch (error: any) {
+    console.error('API Route Error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to fetch songs', details: error.toString() },
+      { status: 500 }
+    );
   }
 }

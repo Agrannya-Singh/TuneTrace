@@ -19,7 +19,9 @@ async function searchYoutube(query: string, pageToken?: string): Promise<any> {
 
   const response = await fetch(`${YOUTUBE_API_URL}/search?${params.toString()}`);
   if (!response.ok) {
-    throw new Error('Failed to fetch from YouTube API');
+    const errorBody = await response.text();
+    console.error('YouTube API Search Error:', response.status, errorBody);
+    throw new Error(`YouTube API Search Failed: ${response.status} ${response.statusText} - ${errorBody}`);
   }
   return response.json();
 }
@@ -33,7 +35,9 @@ async function getVideos(videoIds: string): Promise<any> {
 
   const response = await fetch(`${YOUTUBE_API_URL}/videos?${params.toString()}`);
   if (!response.ok) {
-    throw new Error('Failed to fetch from YouTube API');
+    const errorBody = await response.text();
+    console.error('YouTube API Videos Error:', response.status, errorBody);
+    throw new Error(`YouTube API Videos Failed: ${response.status} ${response.statusText} - ${errorBody}`);
   }
   return response.json();
 }

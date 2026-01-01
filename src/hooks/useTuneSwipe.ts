@@ -9,17 +9,7 @@ const SUGGESTION_SERVICE_BASE_URL = 'https://song-suggest-microservice.onrender.
 export type AppState = 'moodSelection' | 'loading' | 'ready' | 'outOfCards' | 'error';
 export type SwipeDirection = 'left' | 'right' | 'up' | 'down';
 
-async function logRecommendationError(error: any, context: string) {
-    try {
-        await fetch('/api/log', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ error, context }),
-        });
-    } catch (e) {
-        console.error("Failed to write to log endpoint:", e);
-    }
-}
+
 
 export function useTuneSwipe() {
     const { user } = useAuth();
@@ -62,9 +52,11 @@ export function useTuneSwipe() {
     const persistLikes = useCallback(async () => {
         if (pendingLikesRef.current.length === 0) return;
 
-        const songsToSave = [...pendingLikesRef.current];
-        // Clear pending immediately to avoid double sending if next debounce triggers fast
-        pendingLikesRef.current = [];
+        // Take up to 50 songs from the pending queue
+        const songsToSave = [...pendingLikesRef.current].slice(0, 50);
+
+        // Remove the processed songs from the queue
+        pendingLikesRef.current = pendingLikesRef.current.slice(50);
 
         try {
             await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions`, {
@@ -175,9 +167,9 @@ export function useTuneSwipe() {
         setAppState('loading');
 
         try {
-            const songTitles = likedSongs.map(s => s.title);
-
-            const songFormatted = likedSongs.map(s => `${s.title} - ${s.artist}`);
+            const songFormatted = likedSongs
+                .slice(-50)
+                .map(s => `${s.title} - ${s.artist}`);
 
             const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions`, {
                 method: 'POST',
@@ -223,7 +215,6 @@ export function useTuneSwipe() {
                 title: "Recommendation Error",
                 description: errorMessage,
             });
-            await logRecommendationError(errorMessage, "getRecommendations");
             setAppState('outOfCards');
         } finally {
             setIsFetchingRecommendations(false);

@@ -39,30 +39,55 @@ TuneSwipe is a modern, full-stack web application built with a powerful and fast
 - **Styling**: **[Tailwind CSS](https://tailwindcss.com/)** for a utility-first styling workflow.
 - **UI Components**: **[ShadCN UI](https://ui.shadcn.com/)** for a beautiful, accessible, and modern component library.
 
-### Backend & Services
-- **Primary API**: **[Next.js API Routes](https://nextjs.org/docs/app/building-your-application/routing/route-handlers)** to handle initial song fetching and server-side logic.
-- **AI Recommendations**: A **[Python](https://www.python.org/)** microservice built with **[FastAPI](https://fastapi.tiangolo.com/)** that takes a user's liked songs and returns personalized recommendations.
-- **Music Data Source**: **[YouTube Data API](https://developers.google.com/youtube/v3)** to source an endless stream of individual music videos for swiping.
+### Backend & Infrastructure
+- **Hosting**: **[Azure Web Apps](https://azure.microsoft.com/en-us/products/app-service/web/)** for hosting the Python FastAPI microservice.
+- **AI Recommendations**: A **[Python](https://www.python.org/)** microservice built with **[FastAPI](https://fastapi.tiangolo.com/)** that leverages machine learning for personalized music discovery.
+- **Database**: **[PostgreSQL](https://www.postgresql.org/)** (hosted on **Supabase/AWS**) for robust, scalable user data and preference persistence.
+- **Caching**: **[Redis](https://redis.io/)** (hosted on **Render**) for high-performance response caching and sub-200ms latency.
+- **Music Data Source**: **[YouTube Data API](https://developers.google.com/youtube/v3)** to source an endless stream of music for discovery.
 
-- <img width="1397" height="897" alt="image" src="https://github.com/user-attachments/assets/0671b80d-2462-4597-8ee0-5a7b1671d129" />
+---
 
-changes in TuneTrace 2.0
+## Architecture
 
-<img width="1474" height="839" alt="image" src="https://github.com/user-attachments/assets/154675ab-0a0e-40e8-9d10-3951022e6ad3" />
+TuneTrace 2.0 uses a modern 3-layered architecture for maximum performance and scalability:
 
-<img  width="1397" height="897" alt="image" src="https://raw.githubusercontent.com/Agrannya-Singh/TuneTrace/refs/heads/Version-2/diagram-export-7-30-2025-9_05_36-PM.png">
+```mermaid
+graph TD
+    subgraph "Layer 1: User Interface (Next.js)"
+        A[Web Client]
+        B[State Management]
+    end
 
-<img src="https://raw.githubusercontent.com/Agrannya-Singh/Tune_Trace_backend/f233e2b00fbcf72475e853e0dbe2db9b8e49e48b/mermaid.svg" width="1397" height="897">
+    subgraph "Layer 2: Application Logic (Azure Web Apps)"
+        C[FastAPI Engine]
+        D[ML Recommender]
+    end
 
-key achievements of the project:
-Designed a hybrid recommendation engine combining collaborative filtering with content-based algorithms and
-robust fallback mechanisms to enhance music discovery accuracy.
-– Built a high-performance back-end microservice using SQLAlchemy ORM, leveraging Redis caching to achieve
-sub-200ms database latency and reducing external API response times by 40%.
-– Orchestrated a complete CI/CD pipeline for automated, production-ready deployments on Render, ensuring
-system resilience and scalability to handle over 100 concurrent users.
-– Devised a swipe-based music discovery app that fetches YouTube music videos by mood/genre, delivering person-
-alized recommendations and a smooth, mobile-friendly UI.
+    subgraph "Layer 3: Data Persistence & External"
+        E[Supabase Postgres - DB]
+        F[Render Redis - Cache]
+        G[YouTube API - Data]
+    end
+
+    A <--> C
+    C <--> D
+    D <--> E
+    D <--> F
+    D <--> G
+```
+
+---
+
+## Key Achievements
+
+- **Hybrid Recommendation Engine**: Designed a sophisticated engine combining collaborative filtering with content-based algorithms (TF-IDF & Cosine Similarity), as detailed in the technical [whitepaper](file:///c:/Users/Agrannya%20Singh/.antigravity/TuneTrace_Backend/Tune_Trace_backend/tunetrace_report.tex).
+- **High Performance**: Achieved sub-200ms database latency by leveraging **Redis caching** and optimizing SQLAlchemy ORM queries.
+- **Production Migration**: Successfully migrated from SQLite/Render to a enterprise-grade stack on **Azure Web Apps** with a **PostgreSQL** backend.
+- **Scalable Discovery**: Built a robust fallback mechanism ensuring discovery even when cold-starting new user profiles.
+- **Cloud Infrastructure**: Orchestrated a multi-cloud setup utilizing Azure for compute, Supabase (AWS) for storage, and Render for caching services.
+
+---
 
 ---
 

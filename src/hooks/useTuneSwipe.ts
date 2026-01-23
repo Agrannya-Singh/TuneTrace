@@ -4,7 +4,7 @@ import { useAuth } from '@/app/context/AuthContext';
 import { getSongsByIds, getSongsByQuery } from '@/lib/youtube';
 import type { Song } from '@/lib/spotify';
 
-const SUGGESTION_SERVICE_BASE_URL = 'https://song-suggest-microservice.onrender.com';
+const SUGGESTION_SERVICE_BASE_URL = 'https://song-suggest-fasapi-g2acg9cxbpexcmbt.southeastasia-01.azurewebsites.net';
 
 export type AppState = 'moodSelection' | 'loading' | 'ready' | 'outOfCards' | 'error';
 export type SwipeDirection = 'left' | 'right' | 'up' | 'down';
@@ -99,76 +99,76 @@ export function useTuneSwipe() {
         try {
             let fetchedSongs: Song[] = [];
 
-                if (videoIds) {
-                    fetchedSongs = await getSongsByIds(videoIds);
-                } else {
-                    const genreQuery = genres.join(' ');
-                    const moodQuery = moods.join(' ');
+            if (videoIds) {
+                fetchedSongs = await getSongsByIds(videoIds);
+            } else {
+                const genreQuery = genres.join(' ');
+                const moodQuery = moods.join(' ');
 
-                    let query = 'top trending music';
-                    if (moodQuery || genreQuery) {
-                        query = `${moodQuery} ${genreQuery} music`;
-                    }
-
-                    fetchedSongs = await getSongsByQuery(query);
-
-                    // Fetch second page if needed
-                    if (fetchedSongs.length < 20) {
-                        const extraSongs = await getSongsByQuery(query, 'next'); // 'next' isn't a valid token, usually it's passed from prev result.
-                        // Wait, getSongsByQuery signature: (query, pageToken).
-                        // Real nextPageToken is complex. The previous implementation just sent "next"?
-                        // Looking at route.ts (Step 704), it accepts pageToken. 
-                        // But standard logic usually requires the token from the first response.
-                        // The original code passed `pageToken=next`.
-                        // The `route.ts` passed `pageToken` to `getSongsByQuery`.
-                        // `getSongsByQuery` passes it to `searchYoutube`.
-                        // Does `searchYoutube` handle "next" specially? No, it passes it to YouTube API.
-                        // If "next" is not a valid token, YouTube API usually errors or ignores.
-                        // Let's stick to simple single page first to ensure stability or just try a second fetch if valid.
-                        // For now, I'll replicate the single fetch + optional 2nd attempt effectively.
-                        // Actually, getting the token requires the raw response.
-                        // `getSongsByQuery` returns `Song[]`. It swallows the token.
-                        // So I can't easily get page 2 with the current helper.
-                        // I will skip the "fetch more if < 20" for now to simplify and ensure correctness, 
-                        // or I'll just accept what getSongsByQuery gives me (usually 20).
-                    }
+                let query = 'top trending music';
+                if (moodQuery || genreQuery) {
+                    query = `${moodQuery} ${genreQuery} music`;
                 }
 
-                if (fetchedSongs.length > 0) {
-                    const newSongs = fetchedSongs.filter((song: Song) => !songs.some((existing: Song) => existing.id === song.id));
+                fetchedSongs = await getSongsByQuery(query);
 
-                    if (videoIds) {
-                        setSongs(prevSongs => {
-                            const updatedSongs = [...newSongs, ...prevSongs.slice(currentIndex + 1)];
-                            setChildRefs(Array(updatedSongs.length).fill(0).map(() => createRef()));
-                            setCurrentIndex(updatedSongs.length - 1);
-                            return updatedSongs;
-                        });
-                        setAppState('ready');
-                    } else {
-                        setSongs(newSongs);
-                        setChildRefs(Array(newSongs.length).fill(0).map(() => createRef()));
-                        setCurrentIndex(newSongs.length - 1);
-                        setAppState('ready');
-                    }
-                } else if (!videoIds) {
-                    setAppState('outOfCards');
+                // Fetch second page if needed
+                if (fetchedSongs.length < 20) {
+                    const extraSongs = await getSongsByQuery(query, 'next'); // 'next' isn't a valid token, usually it's passed from prev result.
+                    // Wait, getSongsByQuery signature: (query, pageToken).
+                    // Real nextPageToken is complex. The previous implementation just sent "next"?
+                    // Looking at route.ts (Step 704), it accepts pageToken. 
+                    // But standard logic usually requires the token from the first response.
+                    // The original code passed `pageToken=next`.
+                    // The `route.ts` passed `pageToken` to `getSongsByQuery`.
+                    // `getSongsByQuery` passes it to `searchYoutube`.
+                    // Does `searchYoutube` handle "next" specially? No, it passes it to YouTube API.
+                    // If "next" is not a valid token, YouTube API usually errors or ignores.
+                    // Let's stick to simple single page first to ensure stability or just try a second fetch if valid.
+                    // For now, I'll replicate the single fetch + optional 2nd attempt effectively.
+                    // Actually, getting the token requires the raw response.
+                    // `getSongsByQuery` returns `Song[]`. It swallows the token.
+                    // So I can't easily get page 2 with the current helper.
+                    // I will skip the "fetch more if < 20" for now to simplify and ensure correctness, 
+                    // or I'll just accept what getSongsByQuery gives me (usually 20).
                 }
-            } catch (error) {
-                console.error('Error fetching songs:', error);
-                if (!videoIds) {
-                    setAppState('error');
-                    const errorMessage = error instanceof Error ? error.message : "Could not fetch songs. Please try again later.";
-                    toast({
-                        variant: "destructive",
-                        title: "Error Fetching Songs",
-                        description: errorMessage,
-                    });
-                }
-            } finally {
-                setIsFetchingRecommendations(false);
             }
-        }, [toast, currentIndex, songs, selectedGenres, selectedMoods]);
+
+            if (fetchedSongs.length > 0) {
+                const newSongs = fetchedSongs.filter((song: Song) => !songs.some((existing: Song) => existing.id === song.id));
+
+                if (videoIds) {
+                    setSongs(prevSongs => {
+                        const updatedSongs = [...newSongs, ...prevSongs.slice(currentIndex + 1)];
+                        setChildRefs(Array(updatedSongs.length).fill(0).map(() => createRef()));
+                        setCurrentIndex(updatedSongs.length - 1);
+                        return updatedSongs;
+                    });
+                    setAppState('ready');
+                } else {
+                    setSongs(newSongs);
+                    setChildRefs(Array(newSongs.length).fill(0).map(() => createRef()));
+                    setCurrentIndex(newSongs.length - 1);
+                    setAppState('ready');
+                }
+            } else if (!videoIds) {
+                setAppState('outOfCards');
+            }
+        } catch (error) {
+            console.error('Error fetching songs:', error);
+            if (!videoIds) {
+                setAppState('error');
+                const errorMessage = error instanceof Error ? error.message : "Could not fetch songs. Please try again later.";
+                toast({
+                    variant: "destructive",
+                    title: "Error Fetching Songs",
+                    description: errorMessage,
+                });
+            }
+        } finally {
+            setIsFetchingRecommendations(false);
+        }
+    }, [toast, currentIndex, songs, selectedGenres, selectedMoods]);
 
     const getRecommendations = useCallback(async () => {
         if (isFetchingRecommendations || likedSongs.length === 0) return;

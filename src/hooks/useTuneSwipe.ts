@@ -187,7 +187,7 @@ export function useTuneSwipe() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    user_id: user?.email,
+                    user_id: user?.email || 'anon@use.com',
                     songs: songFormatted,
                     genre: selectedGenres.length > 0 ? selectedGenres.join(' ') : 'any'
                 })

@@ -48,7 +48,7 @@
     "react-day-picker": "^8.10.1",
     "react-dom": "^19.2.3",
     "react-tinder-card": "^1.6.4",
-    "recharts": "^2.15.1",
+    "recharts": "^3.7.0",
     "serve": "^14.2.3",
     "spotify-web-api-node": "^5.0.2",
     "tailwind-merge": "^3.0.1",

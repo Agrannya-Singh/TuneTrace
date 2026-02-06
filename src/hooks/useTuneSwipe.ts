@@ -114,24 +114,7 @@ export function useTuneSwipe() {
 
                 // Fetch second page if needed
                 if (fetchedSongs.length < 20) {
-                    const extraSongs = await getSongsByQuery(query, 'next'); // 'next' isn't a valid token, usually it's passed from prev result.
-                    // Wait, getSongsByQuery signature: (query, pageToken).
-                    // Real nextPageToken is complex. The previous implementation just sent "next"?
-                    // Looking at route.ts (Step 704), it accepts pageToken. 
-                    // But standard logic usually requires the token from the first response.
-                    // The original code passed `pageToken=next`.
-                    // The `route.ts` passed `pageToken` to `getSongsByQuery`.
-                    // `getSongsByQuery` passes it to `searchYoutube`.
-                    // Does `searchYoutube` handle "next" specially? No, it passes it to YouTube API.
-                    // If "next" is not a valid token, YouTube API usually errors or ignores.
-                    // Let's stick to simple single page first to ensure stability or just try a second fetch if valid.
-                    // For now, I'll replicate the single fetch + optional 2nd attempt effectively.
-                    // Actually, getting the token requires the raw response.
-                    // `getSongsByQuery` returns `Song[]`. It swallows the token.
-                    // So I can't easily get page 2 with the current helper.
-                    // I will skip the "fetch more if < 20" for now to simplify and ensure correctness, 
-                    // or I'll just accept what getSongsByQuery gives me (usually 20).
-                }
+                    const extraSongs = await getSongsByQuery(query, 'next'); 
             }
 
             if (fetchedSongs.length > 0) {

@@ -46,7 +46,7 @@
     "patch-package": "^8.0.0",
     "react": "^19.2.3",
     "react-day-picker": "^8.10.1",
-    "react-dom": "^19.2.3",
+    "react-dom": "^19.2.4",
     "react-tinder-card": "^1.6.4",
     "recharts": "^3.7.0",
     "serve": "^14.2.3",

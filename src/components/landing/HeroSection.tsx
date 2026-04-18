@@ -1,9 +1,7 @@
-import { Zap, Github, Server } from 'lucide-react';
+import { Zap, Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AuthButton from '@/components/auth-button';
-import { ModeToggle } from '@/components/mode-toggle';
 import Link from 'next/link';
-import Image from 'next/image';
 
 export function HeroSection() {
     return (
@@ -21,7 +19,6 @@ export function HeroSection() {
                         <a className="text-foreground/60 hover:text-foreground transition-all duration-300 ease-out font-headline text-sm" href="#">Open Source</a>
                     </div>
                     <div className="flex items-center gap-3">
-                        <ModeToggle />
                         <AuthButton />
                     </div>
                 </div>
@@ -65,14 +62,14 @@ export function HeroSection() {
                             Start Swiping
                         </Button>
 
-                        <Link href="https://github.com/Agrannya-Singh/TuneTrace" target="_blank" rel="noopener noreferrer">
+                        <Link href="https://github.com/Agrannya-Singh/Tune_Trace_backend" target="_blank" rel="noopener noreferrer">
                             <Button
                                 size="lg"
                                 variant="outline"
                                 className="px-8 py-6 glass-card border border-[hsl(var(--outline-variant))]/30 rounded-full text-foreground font-semibold text-lg hover:bg-[hsl(var(--surface-container-highest))]/60 transition-all hover:scale-105"
                             >
                                 <Github className="mr-2 w-5 h-5" />
-                                Clone Repo
+                                View Documentation
                             </Button>
                         </Link>
                     </div>
@@ -98,13 +95,11 @@ export function HeroSection() {
                     <div className="absolute -top-20 -right-20 w-96 h-96 bg-[hsl(var(--primary))]/20 rounded-full blur-[120px]"></div>
                     <div className="absolute -bottom-20 -left-20 w-96 h-96 bg-[hsl(var(--secondary))]/10 rounded-full blur-[100px]"></div>
                     <div className="relative glass-card border border-[hsl(var(--outline-variant))]/10 rounded-xl overflow-hidden shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-700">
-                        <Image
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
                             src="/hero-visualizer.png"
                             alt="TuneTrace music discovery dashboard"
-                            width={600}
-                            height={400}
                             className="w-full h-auto opacity-80"
-                            priority
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--surface))] via-transparent to-transparent"></div>
                     </div>

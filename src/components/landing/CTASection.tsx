@@ -4,34 +4,40 @@ import Link from 'next/link';
 
 export function CTASection() {
     return (
-        <div className="container mx-auto px-4 py-20">
-            <div className="max-w-4xl mx-auto text-center bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 rounded-3xl p-12">
-                <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
-                    Ready to Discover?
-                </h2>
-                <p className="text-xl text-zinc-300 mb-8">
-                    Start swiping and find your next favorite song today
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Button
-                        size="lg"
-                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-10 py-6 text-lg rounded-full shadow-lg shadow-purple-500/50 transition-all hover:shadow-xl hover:shadow-purple-500/60 hover:scale-105"
-                        onClick={() => window.location.href = '/app'}
-                    >
-                        Get Started Now
-                    </Button>
-                    <Link href="https://github.com/Agrannya-Singh/TuneTrace" target="_blank" rel="noopener noreferrer">
+        <section className="py-24 px-8">
+            <div className="max-w-5xl mx-auto relative glass-card rounded-[2.5rem] p-12 md:p-24 overflow-hidden text-center border border-[hsl(var(--outline-variant))]/20">
+                <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--primary))]/10 via-transparent to-[hsl(var(--secondary))]/10 pointer-events-none"></div>
+                <div className="relative z-10">
+                    <h2 className="text-4xl md:text-6xl font-headline font-extrabold mb-6 tracking-tight text-foreground">
+                        Ready to Discover?
+                    </h2>
+                    <p className="text-xl text-[hsl(var(--on-surface-variant))] mb-12 max-w-2xl mx-auto">
+                        Start swiping and find your next favorite song. Built for music lovers, by music lovers.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <Button
                             size="lg"
-                            variant="outline"
-                            className="border-2 border-zinc-700 hover:border-purple-500 bg-transparent hover:bg-purple-500/10 px-10 py-6 text-lg rounded-full transition-all hover:scale-105"
+                            className="bg-[hsl(var(--primary))] text-[hsl(var(--on-primary))] px-12 py-6 rounded-full font-headline font-bold text-xl hover:scale-105 hover:shadow-[0_0_40px_rgba(221,184,255,0.4)] transition-all duration-300"
+                            onClick={() => window.location.href = '/app'}
                         >
-                            <Github className="mr-2 w-5 h-5" />
-                            Star on GitHub
+                            Get Started Now
                         </Button>
-                    </Link>
+                        <Link href="https://github.com/Agrannya-Singh/TuneTrace" target="_blank" rel="noopener noreferrer">
+                            <Button
+                                size="lg"
+                                variant="outline"
+                                className="border-2 border-[hsl(var(--outline-variant))]/30 hover:border-[hsl(var(--primary))]/50 bg-transparent hover:bg-[hsl(var(--primary))]/10 px-10 py-6 text-lg rounded-full transition-all hover:scale-105"
+                            >
+                                <Github className="mr-2 w-5 h-5" />
+                                Star on GitHub
+                            </Button>
+                        </Link>
+                    </div>
+                    <p className="mt-8 text-sm text-[hsl(var(--on-surface-variant))]/60 font-label tracking-[0.02em]">
+                        Open source forever. No credit card required.
+                    </p>
                 </div>
             </div>
-        </div>
+        </section>
     );
 }

@@ -4,31 +4,48 @@
 
 @layer base {
   :root {
-    --background: 0 0% 7%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 141 76% 42%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
+    --background: 0 0% 7.5%;
+    --foreground: 0 0% 88.6%;
+    --card: 0 0% 12.2%;
+    --card-foreground: 0 0% 88.6%;
+    --popover: 0 0% 7.5%;
+    --popover-foreground: 0 0% 88.6%;
+    --primary: 271 81% 68%;
+    --primary-foreground: 271 100% 25%;
+    --secondary: 340 100% 85%;
+    --secondary-foreground: 340 100% 20%;
+    --muted: 0 0% 12.2%;
     --muted-foreground: 0 0% 63.9%;
-    --accent: 141 76% 48%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 62.8% 30.6%;
+    --accent: 141 100% 58%;
+    --accent-foreground: 141 100% 13%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
-    --ring: 141 76% 48%;
+    --ring: 271 81% 68%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
     --radius: 0.5rem;
+
+    --surface: 0 0% 7.5%;
+    --surface-container: 0 0% 12.2%;
+    --surface-container-low: 0 0% 10.6%;
+    --surface-container-high: 0 0% 16.5%;
+    --surface-container-highest: 0 0% 20.8%;
+    --surface-bright: 0 0% 22.4%;
+    --on-surface: 0 0% 88.6%;
+    --on-surface-variant: 280 10% 80%;
+    --outline-variant: 280 8% 33%;
+
+    --primary-container: 271 84% 46%;
+    --secondary-container: 337 100% 37%;
+    --tertiary: 141 100% 58%;
+    --tertiary-fixed-dim: 141 89% 57%;
+    --on-primary: 271 100% 25%;
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -46,28 +63,63 @@
   }
   body {
     @apply text-foreground;
-    background-color: hsl(var(--background));
-    background-image:
-      radial-gradient(at 27% 37%, hsl(var(--primary) / 0.1) 0px, transparent 50%),
-      radial-gradient(at 97% 21%, hsl(var(--accent) / 0.1) 0px, transparent 50%),
-      radial-gradient(at 52% 99%, hsl(var(--primary) / 0.15) 0px, transparent 50%),
-      radial-gradient(at 10% 29%, hsl(var(--accent) / 0.1) 0px, transparent 50%),
-      radial-gradient(at 97% 96%, hsl(var(--background)) 0px, transparent 50%),
-      radial-gradient(at 33% 50%, hsl(var(--primary) / 0.1) 0px, transparent 50%),
-      radial-gradient(at 79% 53%, hsl(var(--background)) 0px, transparent 50%);
-    animation: gradient-animation 15s ease infinite;
-    background-size: 200% 200%;
+    background-color: hsl(var(--surface));
   }
 }
 
-@keyframes gradient-animation {
-  0% {
-    background-position: 0% 50%;
+/* Velvet Horizon gradient background */
+.velvet-horizon-gradient {
+  background:
+    radial-gradient(circle at top right, rgba(147, 51, 234, 0.15), transparent 40%),
+    radial-gradient(circle at bottom left, rgba(255, 177, 199, 0.1), transparent 40%),
+    hsl(var(--surface));
+}
+
+/* Glassmorphism card */
+.glass-card {
+  background: rgba(53, 53, 53, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Shimmer text effect */
+.text-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--primary)) 0%,
+    hsl(var(--secondary)) 50%,
+    hsl(var(--tertiary)) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Glow shadow utility */
+.glow-primary {
+  box-shadow: 0 0 40px rgba(221, 184, 255, 0.4);
+}
+
+/* Scroll reveal animation */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
   }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out both;
+}
+
+/* Stagger delays */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+.delay-600 { animation-delay: 600ms; }

@@ -2,16 +2,12 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import Providers from '@/app/context/providers';
+import { ThemeProvider } from "@/components/theme-provider"
 
 export const metadata: Metadata = {
-  title: 'TuneTrace',
-  description: 'Discover new music with a swipe.',
+  title: 'TuneTrace — Music Discovery, Deployed Anywhere',
+  description: 'Swipe to discover your next favorite song. Cloud-agnostic, open source music recommendation engine.',
 };
-
-// import { ThemeProvider } from "@/components/theme-provider"
-// We need to import dynamically or ensure it runs on client? 
-// No, next-themes handles it. 
-import { ThemeProvider } from "@/components/theme-provider"
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -24,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
           rel="stylesheet"
         />
       </head>

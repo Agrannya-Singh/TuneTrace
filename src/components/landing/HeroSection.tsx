@@ -15,8 +15,8 @@ export function HeroSection() {
                     </div>
                     <div className="hidden md:flex items-center gap-8">
                         <a className="text-[hsl(var(--primary))] font-semibold transition-all duration-300 ease-out font-headline text-sm" href="#">Platform</a>
-                        <a className="text-foreground/60 hover:text-foreground transition-all duration-300 ease-out font-headline text-sm" href="#">Architecture</a>
-                        <a className="text-foreground/60 hover:text-foreground transition-all duration-300 ease-out font-headline text-sm" href="#">Open Source</a>
+                        <a className="text-foreground/60 hover:text-foreground transition-all duration-300 ease-out font-headline text-sm" href="https://github.com/Agrannya-Singh/Tune_Trace_backend/blob/main/whitepaper.md" target="_blank" rel="noopener noreferrer">Architecture</a>
+                        <a className="text-foreground/60 hover:text-foreground transition-all duration-300 ease-out font-headline text-sm" href="https://github.com/Agrannya-Singh/TuneTrace" target="_blank" rel="noopener noreferrer">Open Source</a>
                     </div>
                     <div className="flex items-center gap-3">
                         <AuthButton />

@@ -1,5 +1,6 @@
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type { Song } from '@/lib/spotify';
 import {
     Dialog,
     DialogContent,
@@ -12,15 +13,26 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface LikedSongsDialogProps {
+    likedSongs: Song[];
     history: any[];
     onOpen: () => void;
     children: React.ReactNode;
 }
 
-export function LikedSongsDialog({ history, onOpen, children }: LikedSongsDialogProps) {
+export function LikedSongsDialog({ likedSongs, history, onOpen, children }: LikedSongsDialogProps) {
+
+    // Merge local swipe likes with server history, deduplicating by video id
+    const localAsHistory = likedSongs.map(s => ({
+        title: s.title,
+        artist: s.artist,
+        video_id: s.id,
+    }));
+    const remoteIds = new Set(history.map((s: any) => s.video_id || s.youtube_video_id));
+    const uniqueLocal = localAsHistory.filter(s => !remoteIds.has(s.video_id));
+    const mergedSongs = [...uniqueLocal, ...history];
 
     const downloadLikedSongs = () => {
-        const content = history.map(song => `${song.title} - ${song.artist} (https://youtube.com/watch?v=${song.video_id})`).join('\n');
+        const content = mergedSongs.map(song => `${song.title} - ${song.artist} (https://youtube.com/watch?v=${song.video_id})`).join('\n');
         const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -45,9 +57,9 @@ export function LikedSongsDialog({ history, onOpen, children }: LikedSongsDialog
                     </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="h-72 w-full rounded-md border p-4">
-                    {history.length > 0 ? (
+                    {mergedSongs.length > 0 ? (
                         <ul className="space-y-2">
-                            {history.map((song) => {
+                            {mergedSongs.map((song) => {
                                 const title = typeof song.title === 'string' ? song.title : 'Unknown Title';
                                 const artist = typeof song.artist === 'string' ? song.artist : 'Unknown Artist';
                                 const key = song.video_id || song.youtube_video_id || Math.random();
@@ -63,7 +75,7 @@ export function LikedSongsDialog({ history, onOpen, children }: LikedSongsDialog
                     )}
                 </ScrollArea>
                 <DialogFooter className="flex-col sm:flex-row gap-2">
-                    <Button onClick={downloadLikedSongs} disabled={history.length === 0}>
+                    <Button onClick={downloadLikedSongs} disabled={mergedSongs.length === 0}>
                         <Download className="mr-2 h-4 w-4" />
                         Download List
                     </Button>

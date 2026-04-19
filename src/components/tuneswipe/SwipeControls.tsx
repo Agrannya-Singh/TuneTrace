@@ -1,6 +1,7 @@
 import { Heart, X, ListMusic, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LikedSongsDialog } from './LikedSongsDialog';
+import type { Song } from '@/lib/spotify';
 
 interface SwipeControlsProps {
     canSwipe: boolean;
@@ -8,6 +9,7 @@ interface SwipeControlsProps {
     onSwipeRight: () => void;
     onRestart: () => void;
     isFetchingRecommendations: boolean;
+    likedSongs: Song[];
     likedSongsHistory: any[];
     fetchLikedSongs: () => void;
 }
@@ -18,6 +20,7 @@ export function SwipeControls({
     onSwipeRight,
     onRestart,
     isFetchingRecommendations,
+    likedSongs,
     likedSongsHistory,
     fetchLikedSongs
 }: SwipeControlsProps) {
@@ -35,6 +38,7 @@ export function SwipeControls({
                 </Button>
 
                 <LikedSongsDialog
+                    likedSongs={likedSongs}
                     history={likedSongsHistory}
                     onOpen={fetchLikedSongs}
                 >

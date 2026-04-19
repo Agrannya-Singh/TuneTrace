@@ -14,6 +14,7 @@ export default function TuneSwipeClient() {
     currentIndex,
     selectedGenres,
     selectedMoods,
+    likedSongs,
     likedSongsHistory,
     isFetchingRecommendations,
     handlers: {
@@ -59,6 +60,7 @@ export default function TuneSwipeClient() {
               onSwipeRight={() => swipe('right')}
               onRestart={handleRestart}
               isFetchingRecommendations={isFetchingRecommendations}
+              likedSongs={likedSongs}
               likedSongsHistory={likedSongsHistory}
               fetchLikedSongs={fetchLikedSongs}
             />

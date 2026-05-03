@@ -42,13 +42,13 @@ export function HeroSection() {
                             Discovery.
                         </span>
                         <br />
-                        Deployed Anywhere.
+                        Bound 2 Discovery.
                     </h1>
 
                     <p className="text-xl md:text-2xl text-[hsl(var(--on-surface-variant))] font-light leading-relaxed max-w-xl mb-10">
-                        Swipe through songs you&apos;ll love.{' '}
-                        <span className="text-foreground font-semibold italic">Built by music lovers</span>,
-                        powered by a hybrid recommendation engine with zero vendor lock-in.
+                        Experience the graduation of playlists. Pure hybrid soul, zero vendor lock-in.{' '}
+                        <span className="text-foreground font-semibold italic">Built for the culture</span>,
+                        powered by an engine that doesn&apos;t just predict, it understands.
                     </p>
 
                     {/* CTA Buttons */}

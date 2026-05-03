@@ -2,6 +2,7 @@
 
 import { useTuneSwipe } from '@/hooks/useTuneSwipe';
 import { MoodSelection } from '@/components/tuneswipe/MoodSelection';
+import { DiscoveryView } from '@/components/tuneswipe/DiscoveryView';
 import { SwipeDeck } from '@/components/tuneswipe/SwipeDeck';
 import { SwipeControls } from '@/components/tuneswipe/SwipeControls';
 import { LoadingView, ErrorView, OutOfCardsView } from '@/components/tuneswipe/StatusViews';
@@ -14,17 +15,21 @@ export default function TuneSwipeClient() {
     currentIndex,
     selectedGenres,
     selectedMoods,
+    discoveryQuery,
     likedSongs,
     likedSongsHistory,
     isFetchingRecommendations,
     handlers: {
       handleCheckboxChange,
       handleFindSongs,
+      handleDiscovery,
+      setDiscoveryQuery,
       handleRestart,
       fetchLikedSongs,
       swiped,
       outOfFrame,
       swipe,
+      setAppState,
     },
     flags: {
       canSwipe
@@ -40,6 +45,16 @@ export default function TuneSwipeClient() {
             selectedMoods={selectedMoods}
             onCheckboxChange={handleCheckboxChange}
             onSubmit={handleFindSongs}
+            onTryDiscovery={() => setAppState('discovery')}
+          />
+        );
+      case 'discovery':
+        return (
+          <DiscoveryView
+            query={discoveryQuery}
+            setQuery={setDiscoveryQuery}
+            onSubmit={handleDiscovery}
+            onBack={() => setAppState('moodSelection')}
           />
         );
       case 'loading':

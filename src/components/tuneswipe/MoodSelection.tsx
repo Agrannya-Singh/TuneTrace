@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react';
+import { Search, Compass } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -13,9 +13,10 @@ interface MoodSelectionProps {
     selectedMoods: string[];
     onCheckboxChange: (type: 'genre' | 'mood', value: string, checked: boolean) => void;
     onSubmit: () => void;
+    onTryDiscovery: () => void;
 }
 
-export function MoodSelection({ selectedGenres, selectedMoods, onCheckboxChange, onSubmit }: MoodSelectionProps) {
+export function MoodSelection({ selectedGenres, selectedMoods, onCheckboxChange, onSubmit, onTryDiscovery }: MoodSelectionProps) {
     return (
         <Card className="w-full max-w-lg">
             <CardHeader>
@@ -66,10 +67,21 @@ export function MoodSelection({ selectedGenres, selectedMoods, onCheckboxChange,
                             </ScrollArea>
                         </div>
                     </div>
-                    <Button type="submit" className="w-full mt-6">
-                        <Search className="mr-2 h-4 w-4" />
-                        Find Music
-                    </Button>
+                    <div className="flex flex-col gap-3 mt-6">
+                        <Button type="submit" className="w-full">
+                            <Search className="mr-2 h-4 w-4" />
+                            Find Music
+                        </Button>
+                        <Button 
+                            type="button" 
+                            variant="outline" 
+                            className="w-full border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
+                            onClick={onTryDiscovery}
+                        >
+                            <Compass className="mr-2 h-4 w-4" />
+                            Try Semantic Discovery
+                        </Button>
+                    </div>
                 </form>
             </CardContent>
         </Card>

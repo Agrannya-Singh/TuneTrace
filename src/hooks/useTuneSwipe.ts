@@ -4,9 +4,9 @@ import { useAuth } from '@/app/context/AuthContext';
 import { getSongsByIds, getSongsByQuery } from '@/lib/youtube';
 import type { Song } from '@/lib/spotify';
 
-const SUGGESTION_SERVICE_BASE_URL = 'https://song-suggest-fasapi-g2acg9cxbpexcmbt.southeastasia-01.azurewebsites.net';
+const SUGGESTION_SERVICE_BASE_URL = 'https://song-suggest-fastapi-ajaqgfa8aja8crbn.southeastasia-01.azurewebsites.net';
 
-export type AppState = 'moodSelection' | 'loading' | 'ready' | 'outOfCards' | 'error';
+export type AppState = 'moodSelection' | 'loading' | 'ready' | 'outOfCards' | 'error' | 'discovery';
 export type SwipeDirection = 'left' | 'right' | 'up' | 'down';
 
 export function useTuneSwipe() {
@@ -22,6 +22,7 @@ export function useTuneSwipe() {
 
     const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
     const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
+    const [discoveryQuery, setDiscoveryQuery] = useState('');
     const [isFetchingRecommendations, setIsFetchingRecommendations] = useState(false);
 
     const currentIndexRef = useRef(currentIndex);
@@ -101,7 +102,7 @@ export function useTuneSwipe() {
                     const extraSongs = await getSongsByQuery(query, 'next');
                     fetchedSongs = [...fetchedSongs, ...extraSongs];
                 }
-            } // Fixed: Added missing closing bracket for the 'else' block
+            }
 
             if (fetchedSongs.length > 0) {
                 // Filter out songs already in the list
@@ -137,6 +138,46 @@ export function useTuneSwipe() {
             setIsFetchingRecommendations(false);
         }
     }, [toast, currentIndex, songs]);
+
+    const discoverMusic = useCallback(async (query: string) => {
+        setAppState('loading');
+        setLikedSongs([]);
+        try {
+            const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/discover`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: query,
+                    limit: 10
+                })
+            });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => null);
+                throw new Error(data?.detail || `Server error: ${res.status}`);
+            }
+
+            const data = await res.json();
+            if (data.results?.length > 0) {
+                const vIds = data.results.map((s: any) => s.youtube_video_id).join(',');
+                await fetchSongs([], [], vIds);
+                toast({
+                    title: "Discovery Results",
+                    description: `Found ${data.results.length} songs matching your semantic query.`,
+                });
+            } else {
+                setAppState('outOfCards');
+            }
+        } catch (e) {
+            console.error("Discovery error", e);
+            setAppState('error');
+            toast({
+                variant: "destructive",
+                title: "Discovery Failed",
+                description: e instanceof Error ? e.message : "Could not discover music.",
+            });
+        }
+    }, [fetchSongs, toast]);
 
     const getRecommendations = useCallback(async () => {
         if (isFetchingRecommendations || likedSongs.length === 0) return;
@@ -192,12 +233,19 @@ export function useTuneSwipe() {
 
     const handleFindSongs = () => fetchSongs(selectedGenres, selectedMoods);
 
+    const handleDiscovery = () => {
+        if (discoveryQuery.trim()) {
+            discoverMusic(discoveryQuery);
+        }
+    };
+
     const handleRestart = () => {
         setAppState('moodSelection');
         setSongs([]);
         setLikedSongs([]);
         setSelectedGenres([]);
         setSelectedMoods([]);
+        setDiscoveryQuery('');
         updateCurrentIndex(0);
     };
 
@@ -235,18 +283,23 @@ export function useTuneSwipe() {
         currentIndex,
         selectedGenres,
         selectedMoods,
+        discoveryQuery,
         likedSongs,
         likedSongsHistory,
         isFetchingRecommendations,
         handlers: {
             handleCheckboxChange,
             handleFindSongs,
+            handleDiscovery,
+            setDiscoveryQuery,
             handleRestart,
             fetchLikedSongs,
             swiped,
             outOfFrame,
             swipe,
+            setAppState,
         },
         flags: { canSwipe }
     };
 }
+

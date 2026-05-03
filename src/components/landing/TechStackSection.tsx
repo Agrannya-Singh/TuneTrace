@@ -14,7 +14,8 @@ const techStack = {
         { name: "YouTube API", desc: "Music Data Source" }
     ],
     infra: [
-        { name: "Render", desc: "Microservice Hosting" },
+        { name: "Azure App Service", desc: "Backend API Hosting" },
+        { name: "Supabase", desc: "Vector Search (pgvector)" },
         { name: "Vercel", desc: "Frontend Edge Network" },
         { name: "Firebase", desc: "Auth & Realtime DB" }
     ]

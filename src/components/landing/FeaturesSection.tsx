@@ -23,7 +23,7 @@ const features = [
     {
         icon: <Shield className="w-6 h-6" />,
         title: "Zero Vendor Lock-in",
-        description: "Multi-cloud native design. Move from AWS to Render to Vercel in minutes, not months.",
+        description: "Multi-cloud native design. Move from Azure to Supabase to Vercel in minutes, not months.",
         colorClass: "text-[hsl(var(--tertiary))]",
         bgClass: "bg-[hsl(var(--tertiary))]/10",
         hoverBorder: "hover:border-[hsl(var(--tertiary))]/40"

@@ -187,7 +187,7 @@ export function useTuneSwipe() {
 
         try {
             const songFormatted = likedSongs
-                .slice(-50)
+                .slice(-20)
                 .map(s => `${s.title} - ${s.artist}`);
 
             const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions`, {

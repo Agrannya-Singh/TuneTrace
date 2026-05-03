@@ -37,17 +37,13 @@ export function HeroSection() {
 
                     {/* Main Heading */}
                     <h1 className="text-6xl md:text-8xl font-headline font-extrabold tracking-[-0.04em] leading-[0.95] mb-8 text-foreground">
-                        Music{' '}
-                        <span className="text-shimmer">
-                            Discovery.
-                        </span>
+                        G.O.O.D. Music.
                         <br />
-                        Bound 2 Discovery.
+                        Bound 2 <span className="text-shimmer">Discovery.</span>
                     </h1>
 
                     <p className="text-xl md:text-2xl text-[hsl(var(--on-surface-variant))] font-light leading-relaxed max-w-xl mb-10">
-                        Experience the graduation of playlists. Pure hybrid soul, zero vendor lock-in.{' '}
-                        <span className="text-foreground font-semibold italic">Built for the culture</span>,
+                        Experience the graduation of playlists. Pure hybrid soul, zero vendor lock-in, 
                         powered by an engine that doesn&apos;t just predict, it understands.
                     </p>
 

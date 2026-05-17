@@ -37,7 +37,12 @@ export function useTuneSwipe() {
     const fetchLikedSongs = useCallback(async () => {
         if (!user?.email) return;
         try {
-            const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/liked-songs?user_id=${user.email}`);
+            const token = await user.getIdToken();
+            const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/liked-songs?user_id=${user.email}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
             if (res.ok) {
                 const data = await res.json();
                 setLikedSongsHistory(data);
@@ -45,7 +50,7 @@ export function useTuneSwipe() {
         } catch (error) {
             console.error('Error fetching liked songs:', error);
         }
-    }, [user?.email]);
+    }, [user]);
 
     const persistLikes = useCallback(async () => {
         if (pendingLikesRef.current.length === 0) return;
@@ -54,9 +59,13 @@ export function useTuneSwipe() {
         pendingLikesRef.current = pendingLikesRef.current.slice(50);
 
         try {
+            const token = user ? await user.getIdToken() : '';
             await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify({
                     user_id: user?.email || 'anon@use.com',
                     songs: songsToSave.map(s => `${s.title} - ${s.artist}`),
@@ -66,7 +75,7 @@ export function useTuneSwipe() {
         } catch (e) {
             console.error("Failed to persist likes", e);
         }
-    }, [user?.email, selectedGenres]);
+    }, [user, selectedGenres]);
 
     const queueLike = (song: Song) => {
         pendingLikesRef.current.push(song);
@@ -143,9 +152,13 @@ export function useTuneSwipe() {
         setAppState('loading');
         setLikedSongs([]);
         try {
+            const token = user ? await user.getIdToken() : '';
             const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/discover`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify({
                     query: query,
                     limit: 10
@@ -177,7 +190,7 @@ export function useTuneSwipe() {
                 description: e instanceof Error ? e.message : "Could not discover music.",
             });
         }
-    }, [fetchSongs, toast]);
+    }, [fetchSongs, toast, user]);
 
     const getRecommendations = useCallback(async () => {
         if (isFetchingRecommendations || likedSongs.length === 0) return;
@@ -190,9 +203,13 @@ export function useTuneSwipe() {
                 .slice(-20)
                 .map(s => `${s.title} - ${s.artist}`);
 
+            const token = user ? await user.getIdToken() : '';
             const res = await fetch(`${SUGGESTION_SERVICE_BASE_URL}/suggestions`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify({
                     user_id: user?.email || 'anon@use.com',
                     songs: songFormatted,
@@ -223,7 +240,7 @@ export function useTuneSwipe() {
         } finally {
             setIsFetchingRecommendations(false);
         }
-    }, [fetchSongs, isFetchingRecommendations, toast, likedSongs, selectedGenres, user?.email]);
+    }, [fetchSongs, isFetchingRecommendations, toast, likedSongs, selectedGenres, user]);
 
     useEffect(() => {
         if (appState === 'outOfCards' && likedSongs.length > 0) {

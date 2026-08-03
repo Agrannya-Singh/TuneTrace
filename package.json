@@ -51,7 +51,7 @@
     "recharts": "^3.7.0",
     "serve": "^14.2.3",
     "spotify-web-api-node": "^5.0.2",
-    "tailwind-merge": "^3.0.1",
+    "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^13.0.0"
   },
